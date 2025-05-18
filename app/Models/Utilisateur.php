@@ -3,20 +3,28 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class Utilisateur extends Model
+class Utilisateur extends Authenticatable
 {
     use HasFactory;
 
     protected $table = 'Utilisateur';
     public $timestamps = false;
+    public $incrementing = false; // Tell Laravel this is not auto-incrementing
     
     protected $fillable = [
+        'id',
         'nom',
         'section',
         'credentials',
         'section_id',
+        'api_token',
+    ];
+    
+    protected $hidden = [
+        'credentials',
+        'api_token',
     ];
     
     public function sectionRelation()
@@ -52,5 +60,15 @@ class Utilisateur extends Model
     public function gestionsAdministratives()
     {
         return $this->belongsToMany(GestionAdministrative::class, 'UtilisateurGestionAdministrative', 'utilisateur_id', 'gestion_id');
+    }
+    
+    /**
+     * Get the password for the user.
+     *
+     * @return string
+     */
+    public function getAuthPassword()
+    {
+        return $this->credentials;
     }
 }

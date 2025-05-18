@@ -11,8 +11,10 @@ class Role extends Model
 
     protected $table = 'Role';
     public $timestamps = false;
+    public $incrementing = false; // Tell Laravel this is not an auto-incrementing key
     
     protected $fillable = [
+        'id',
         'nom',
         'cout',
     ];

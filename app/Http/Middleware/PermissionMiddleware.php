@@ -20,17 +20,15 @@ class PermissionMiddleware
     public function handle(Request $request, Closure $next, $permission)
     {
         // Get the authenticated user
-        // Note: You may need to adjust this based on your auth configuration
-        $userId = Auth::id();
+        $user = Auth::guard('api')->user();
         
-        if (!$userId) {
+        if (!$user) {
             return response()->json(['message' => 'Unauthorized - User not authenticated'], 401);
         }
         
-        $user = Utilisateur::with('roles.permissions')->find($userId);
-        
-        if (!$user) {
-            return response()->json(['message' => 'Unauthorized - User not found'], 401);
+        // Load permissions if not already loaded
+        if (!$user->relationLoaded('roles.permissions')) {
+            $user->load('roles.permissions');
         }
         
         // Check if the user has the required permission through any of their roles

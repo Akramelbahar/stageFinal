@@ -13,6 +13,16 @@ use Illuminate\Http\JsonResponse;
 class AuthController extends Controller
 {
     /**
+     * Create a new AuthController instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->middleware('auth:api', ['except' => ['login']]);
+    }
+
+    /**
      * Login user and create token
      *
      * @param  Request  $request
@@ -40,10 +50,9 @@ class AuthController extends Controller
         }
 
         // Generate API token for the user
-        // Note: In a real application, you might want to use Laravel Sanctum or Passport
-        $token = Str::random(60);
+        $token = Str::random(80);
         
-        // Store token (this is a simplified example, in a real app use a proper token system)
+        // Store token
         $user->api_token = $token;
         $user->save();
 
@@ -62,6 +71,7 @@ class AuthController extends Controller
         return response()->json([
             'user' => $user,
             'token' => $token,
+            'token_type' => 'Bearer',
             'permissions' => $permissions,
             'message' => 'Login successful'
         ], 200);
@@ -77,7 +87,11 @@ class AuthController extends Controller
     {
         $user = auth()->user();
         
-        // Revoke token (this is a simplified example)
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+        
+        // Revoke token
         $user->api_token = null;
         $user->save();
 

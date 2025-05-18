@@ -11,8 +11,10 @@ class Permission extends Model
 
     protected $table = 'Permission';
     public $timestamps = false;
+    public $incrementing = false; // Tell Laravel this is not an auto-incrementing key
     
     protected $fillable = [
+        'id',
         'module',
         'action',
         'description',

@@ -29,85 +29,90 @@ use App\Http\Controllers\Api\DashboardController;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
-
-// Authentication routes (customize based on your auth setup)
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');
-
+Route::post('/login', [AuthController::class, 'login'])->name('login');
+// Authentication routes (public)
+Route::get('/test', function() {
+    return ['message' => 'API is working'];
+});
 // Protected API routes
 Route::middleware('auth:api')->group(function () {
+    // Auth routes
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/user', [AuthController::class, 'user']);
+    Route::post('/check-permissions', [AuthController::class, 'checkPermissions']);
+    
     // Machine routes
+    Route::get('machines/maintenance/soon', [MachineElectriqueController::class, 'maintenanceSoon'])->middleware('permission:machine-list');
+    Route::put('machines/{id}/update-status', [MachineElectriqueController::class, 'updateStatus'])->middleware('permission:machine-edit');
     Route::apiResource('machines', MachineElectriqueController::class);
-    Route::get('machines/maintenance/soon', [MachineElectriqueController::class, 'maintenanceSoon']);
-    Route::put('machines/{id}/update-status', [MachineElectriqueController::class, 'updateStatus']);
     
     // Intervention routes
+    Route::get('interventions/urgent', [InterventionController::class, 'urgentInterventions'])->middleware('permission:intervention-list');
+    Route::get('interventions/status/{status}', [InterventionController::class, 'byStatus'])->middleware('permission:intervention-list');
+    Route::get('interventions/machine/{machineId}', [InterventionController::class, 'byMachine'])->middleware('permission:intervention-list');
     Route::apiResource('interventions', InterventionController::class);
-    Route::get('interventions/urgent', [InterventionController::class, 'urgentInterventions']);
-    Route::get('interventions/status/{status}', [InterventionController::class, 'byStatus']);
-    Route::get('interventions/machine/{machineId}', [InterventionController::class, 'byMachine']);
     
     // Diagnostic routes
+    Route::get('diagnostics/intervention/{interventionId}', [DiagnosticController::class, 'byIntervention'])->middleware('permission:diagnostic-view');
     Route::apiResource('diagnostics', DiagnosticController::class);
-    Route::get('diagnostics/intervention/{interventionId}', [DiagnosticController::class, 'byIntervention']);
     
     // Maintenance routes
+    Route::put('maintenances/{id}/complete', [MaintenanceController::class, 'complete'])->middleware('permission:maintenance-edit');
+    Route::get('maintenances/statistics', [MaintenanceController::class, 'statistics'])->middleware('permission:maintenance-list');
     Route::apiResource('maintenances', MaintenanceController::class);
-    Route::put('maintenances/{id}/complete', [MaintenanceController::class, 'complete']);
-    Route::get('maintenances/statistics', [MaintenanceController::class, 'statistics']);
     
     // Renovation routes
+    Route::get('renovations/intervention/{interventionId}', [RenovationController::class, 'byIntervention'])->middleware('permission:renovation-view');
     Route::apiResource('renovations', RenovationController::class);
-    Route::get('renovations/intervention/{interventionId}', [RenovationController::class, 'byIntervention']);
     
     // Rapport routes
+    Route::get('rapports/renovation/{renovationId}', [RapportController::class, 'byRenovation'])->middleware('permission:rapport-view');
+    Route::get('rapports/maintenance/{maintenanceId}', [RapportController::class, 'byMaintenance'])->middleware('permission:rapport-view');
+    Route::get('rapports/prestataire/{prestataireId}', [RapportController::class, 'byPrestataire'])->middleware('permission:rapport-view');
+    Route::put('rapports/{id}/validate', [RapportController::class, 'validateRapport'])->middleware('permission:rapport-validate');
     Route::apiResource('rapports', RapportController::class);
-    Route::get('rapports/renovation/{renovationId}', [RapportController::class, 'byRenovation']);
-    Route::get('rapports/maintenance/{maintenanceId}', [RapportController::class, 'byMaintenance']);
-    Route::get('rapports/prestataire/{prestataireId}', [RapportController::class, 'byPrestataire']);
-    Route::put('rapports/{id}/validate', [RapportController::class, 'validateRapport']);
     
     // Controle Qualite routes
+    Route::get('controles/intervention/{interventionId}', [ControleQualiteController::class, 'byIntervention'])->middleware('permission:controle-view');
     Route::apiResource('controles', ControleQualiteController::class);
-    Route::get('controles/intervention/{interventionId}', [ControleQualiteController::class, 'byIntervention']);
     
     // Planification routes
+    Route::get('planifications/user/{userId}', [PlanificationController::class, 'byUser'])->middleware('permission:planification-view');
     Route::apiResource('planifications', PlanificationController::class);
-    Route::get('planifications/user/{userId}', [PlanificationController::class, 'byUser']);
     
     // Utilisateur routes
+    Route::get('utilisateurs/section/{sectionId}', [UtilisateurController::class, 'bySection'])->middleware('permission:utilisateur-view');
+    Route::get('utilisateurs/{id}/permissions', [UtilisateurController::class, 'permissions'])->middleware('permission:utilisateur-view');
+    Route::post('utilisateurs/{id}/roles', [UtilisateurController::class, 'assignRoles'])->middleware('permission:utilisateur-manage-roles');
+    Route::post('utilisateurs/create-admin', [UtilisateurController::class, 'createAdmin'])->middleware('permission:admin-roles');
     Route::apiResource('utilisateurs', UtilisateurController::class);
-    Route::get('utilisateurs/section/{sectionId}', [UtilisateurController::class, 'bySection']);
-    Route::get('utilisateurs/{id}/permissions', [UtilisateurController::class, 'permissions']);
-    Route::post('utilisateurs/{id}/roles', [UtilisateurController::class, 'assignRoles']);
-    Route::post('utilisateurs/create-admin', [UtilisateurController::class, 'createAdmin']);
     
     // Section routes
+    Route::get('sections/responsable/{responsableId}', [SectionController::class, 'byResponsable'])->middleware('permission:section-view');
     Route::apiResource('sections', SectionController::class);
-    Route::get('sections/responsable/{responsableId}', [SectionController::class, 'byResponsable']);
     
     // Role routes
-    Route::apiResource('roles', RoleController::class);
-    Route::get('roles/{id}/users', [RoleController::class, 'users']);
-    Route::post('roles/{id}/permissions', [RoleController::class, 'assignPermissions']);
-    Route::post('roles/create-admin', [RoleController::class, 'createAdminRole']);
+    Route::get('roles/{id}/users', [RoleController::class, 'users'])->middleware('permission:admin-roles');
+    Route::post('roles/{id}/permissions', [RoleController::class, 'assignPermissions'])->middleware('permission:admin-roles');
+    Route::post('roles/create-admin', [RoleController::class, 'createAdminRole'])->middleware('permission:admin-roles');
+    Route::apiResource('roles', RoleController::class)->middleware('permission:admin-roles');
     
     // Permission routes
-    Route::apiResource('permissions', PermissionController::class);
-    Route::get('permissions/module/{module}', [PermissionController::class, 'byModule']);
-    Route::get('permissions/modules', [PermissionController::class, 'modules']);
-    Route::post('permissions/generate-crud', [PermissionController::class, 'generateCrudPermissions']);
+    Route::get('permissions/module/{module}', [PermissionController::class, 'byModule'])->middleware('permission:admin-permissions');
+    Route::get('permissions/modules', [PermissionController::class, 'modules'])->middleware('permission:admin-permissions');
+    Route::post('permissions/generate-crud', [PermissionController::class, 'generateCrudPermissions'])->middleware('permission:admin-permissions');
+    Route::apiResource('permissions', PermissionController::class)->middleware('permission:admin-permissions');
     
     // Prestataire Externe routes
+    Route::get('prestataires/{id}/rapports', [PrestataireExterneController::class, 'rapports'])->middleware('permission:prestataire-view');
+    Route::post('prestataires/{id}/users', [PrestataireExterneController::class, 'assignUsers'])->middleware('permission:prestataire-edit');
     Route::apiResource('prestataires', PrestataireExterneController::class);
-    Route::get('prestataires/{id}/rapports', [PrestataireExterneController::class, 'rapports']);
-    Route::post('prestataires/{id}/users', [PrestataireExterneController::class, 'assignUsers']);
     
     // Gestion Administrative routes
+    Route::get('gestions/rapport/{rapportId}', [GestionAdministrativeController::class, 'byRapport'])->middleware('permission:gestion-view');
+    Route::put('gestions/{id}/validate', [GestionAdministrativeController::class, 'validateGestion'])->middleware('permission:gestion-validate');
+    Route::post('gestions/{id}/users', [GestionAdministrativeController::class, 'assignUsers'])->middleware('permission:gestion-edit');
     Route::apiResource('gestions', GestionAdministrativeController::class);
-    Route::get('gestions/rapport/{rapportId}', [GestionAdministrativeController::class, 'byRapport']);
-    Route::put('gestions/{id}/validate', [GestionAdministrativeController::class, 'validateGestion']);
-    Route::post('gestions/{id}/users', [GestionAdministrativeController::class, 'assignUsers']);
     
     // Dashboard routes
     Route::get('dashboard/statistics', [DashboardController::class, 'statistics']);
