@@ -12,7 +12,12 @@ class Section extends Model
     protected $table = 'Section';
     public $timestamps = false;
     
+    // Add these lines
+    public $incrementing = false;
+    protected $keyType = 'integer';
+    
     protected $fillable = [
+        'id', // Add id to fillable
         'nom',
         'type',
         'responsable_id',

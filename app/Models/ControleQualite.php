@@ -12,7 +12,12 @@ class ControleQualite extends Model
     protected $table = 'ControleQualite';
     public $timestamps = false;
     
+    // Add these lines
+    public $incrementing = false;
+    protected $keyType = 'integer';
+    
     protected $fillable = [
+        'id', // Add id to fillable
         'dateControle',
         'resultatsEssais',
         'analyseVibratoire',

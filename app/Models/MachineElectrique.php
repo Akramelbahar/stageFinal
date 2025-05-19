@@ -12,7 +12,12 @@ class MachineElectrique extends Model
     protected $table = 'MachineElectrique';
     public $timestamps = false;
     
+    // Add these lines
+    public $incrementing = false;
+    protected $keyType = 'integer';
+    
     protected $fillable = [
+        'id', // Add id to fillable
         'nom',
         'etat',
         'valeur',

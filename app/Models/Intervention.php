@@ -12,7 +12,12 @@ class Intervention extends Model
     protected $table = 'Intervention';
     public $timestamps = false;
     
+    // Add these lines
+    public $incrementing = false;
+    protected $keyType = 'integer';
+    
     protected $fillable = [
+        'id', // Add id to fillable
         'date',
         'description',
         'typeOperation',

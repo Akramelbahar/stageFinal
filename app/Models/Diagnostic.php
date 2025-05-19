@@ -12,7 +12,12 @@ class Diagnostic extends Model
     protected $table = 'Diagnostic';
     public $timestamps = false;
     
+    // Add these lines
+    public $incrementing = false;
+    protected $keyType = 'integer';
+    
     protected $fillable = [
+        'id', // Add id to fillable
         'dateCreation',
         'intervention_id',
     ];

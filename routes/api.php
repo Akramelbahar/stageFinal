@@ -29,6 +29,14 @@ use App\Http\Controllers\Api\DashboardController;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+Route::options('/{any}', function() {
+    return response('', 200)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-CSRF-TOKEN')
+        ->header('Access-Control-Allow-Credentials', 'true')
+        ->header('Access-Control-Max-Age', '86400');
+})->where('any', '.*');
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 // Authentication routes (public)
 Route::get('/test', function() {

@@ -12,7 +12,12 @@ class GestionAdministrative extends Model
     protected $table = 'GestionAdministrative';
     public $timestamps = false;
     
+    // Add these lines
+    public $incrementing = false;
+    protected $keyType = 'integer';
+    
     protected $fillable = [
+        'id', // Add id to fillable
         'commandeAchat',
         'facturation',
         'validation',

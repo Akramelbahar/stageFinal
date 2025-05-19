@@ -12,7 +12,12 @@ class Planification extends Model
     protected $table = 'Planification';
     public $timestamps = false;
     
+    // Add these lines
+    public $incrementing = false;
+    protected $keyType = 'integer';
+    
     protected $fillable = [
+        'id', // Add id to fillable
         'dateCreation',
         'capaciteExecution',
         'urgencePrise',

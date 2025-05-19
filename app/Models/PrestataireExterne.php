@@ -12,7 +12,12 @@ class PrestataireExterne extends Model
     protected $table = 'PrestataireExterne';
     public $timestamps = false;
     
+    // Add these lines
+    public $incrementing = false;
+    protected $keyType = 'integer';
+    
     protected $fillable = [
+        'id', // Add id to fillable
         'nom',
         'contrat',
         'rapportOperation',

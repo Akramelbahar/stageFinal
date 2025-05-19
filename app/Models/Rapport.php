@@ -12,7 +12,12 @@ class Rapport extends Model
     protected $table = 'Rapport';
     public $timestamps = false;
     
+    // Add these lines
+    public $incrementing = false;
+    protected $keyType = 'integer';
+    
     protected $fillable = [
+        'id', // Add id to fillable
         'dateCreation',
         'contenu',
         'validation',

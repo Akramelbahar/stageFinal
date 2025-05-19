@@ -39,7 +39,18 @@ class BaseApiController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $item = $this->model::create($request->all());
+        // Create the data array with all request data
+        $data = $request->all();
+        
+        // Generate a new ID if not provided
+        if (!isset($data['id'])) {
+            // Get the next available ID
+            $maxId = $this->model::max('id') ?? 0;
+            $data['id'] = $maxId + 1;
+        }
+
+        // Create with the ID
+        $item = $this->model::create($data);
         
         // Load relations if they exist
         if (count($this->relations) > 0) {
