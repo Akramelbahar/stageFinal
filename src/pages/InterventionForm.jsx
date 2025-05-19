@@ -2,17 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { RiSaveLine, RiCloseLine } from 'react-icons/ri';
 
-// API calls - Fixed the import path
-// API imports - make sure these files exist in src/api/
-import { getInterventionById, createIntervention, updateIntervention } from '../../api/interventions';
-import { getAllMachines } from '../../api/machines';
+// API calls - Fixed import paths
+import { getInterventionById, createIntervention, updateIntervention } from '../api/interventions';
+import { getAllMachines } from '../api/machines';
 
 // Component imports
-import Card from '../../components/common/Card';
-import Button from '../../components/common/Button';
+import Card from '../components/common/Card';
+import Button from '../components/common/Button';
 
 // Hook imports
-import useAuth from '../../hooks/useAuth';
+import useAuth from '../hooks/useAuth';
+
 const InterventionForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();

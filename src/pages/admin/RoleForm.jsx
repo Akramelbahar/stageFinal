@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RiSaveLine, RiCloseLine } from 'react-icons/ri';
 
-// API calls
-import { getRoleById, createRole, updateRole, assignPermissionsToRole } from '../api/roles';
-import { getAllPermissions, getAllPermissionModules } from '../api/roles';
+// API calls - Fixed import paths
+import { getRoleById, createRole, updateRole, assignPermissionsToRole, 
+         getAllPermissions, getAllPermissionModules } from '../../api/roles';
 
 // Components
 import Card from '../../components/common/Card';

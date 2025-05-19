@@ -3,8 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { RiSaveLine, RiCloseLine } from 'react-icons/ri';
 
 // API calls
-import { getSectionById, createSection, updateSection } from '../api/sections';
-import { getAllUsers } from '../api/utilisateurs';
+import { getSectionById, createSection, updateSection } from '../../api/sections';
+import { getAllUsers } from '../../api/utilisateurs';
 
 // Components
 import Card from '../../components/common/Card';

@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RiSaveLine, RiCloseLine, RiShieldUserLine } from 'react-icons/ri';
 
-// API calls
-import { getUserById, createUser, updateUser, assignRolesToUser } from '../api/utilisateurs';
-import { getAllSections } from '../api/sections';
-import { getAllRoles } from '../api/roles';
+// API calls - Fixed import paths
+import { getUserById, createUser, updateUser, assignRolesToUser } from '../../api/utilisateurs';
+import { getAllSections } from '../../api/sections';
+import { getAllRoles } from '../../api/roles';
 
 // Components
 import Card from '../../components/common/Card';
