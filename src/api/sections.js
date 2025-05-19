@@ -22,17 +22,6 @@ export const getSectionById = async (id) => {
   }
 };
 
-// Get sections by responsable
-export const getSectionsByResponsable = async (responsableId) => {
-  try {
-    const response = await api.get(`/sections/responsable/${responsableId}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching sections by responsable:', error);
-    throw error.response?.data || { message: 'Erreur lors de la récupération des sections pour ce responsable' };
-  }
-};
-
 // Create a new section
 export const createSection = async (sectionData) => {
   try {
@@ -66,13 +55,24 @@ export const deleteSection = async (id) => {
   }
 };
 
-// Assign a responsable to a section
+// Assign responsable to a section
 export const assignResponsableToSection = async (id, responsableId) => {
   try {
     const response = await api.post(`/sections/${id}/responsable`, { responsable_id: responsableId });
     return response.data;
   } catch (error) {
-    console.error('Error assigning responsable to section:', error);
-    throw error.response?.data || { message: 'Erreur lors de l\'attribution du responsable à la section' };
+    console.error('Error assigning responsable:', error);
+    throw error.response?.data || { message: 'Erreur lors de l\'attribution du responsable' };
+  }
+};
+
+// Get sections by responsable
+export const getSectionsByResponsable = async (responsableId) => {
+  try {
+    const response = await api.get(`/sections/responsable/${responsableId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching sections by responsable:', error);
+    throw error.response?.data || { message: 'Erreur lors de la récupération des sections' };
   }
 };
