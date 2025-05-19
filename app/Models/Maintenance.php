@@ -13,7 +13,7 @@ class Maintenance extends Model
     public $timestamps = false;
     
     protected $primaryKey = 'intervention_id';
-    public $incrementing = false;
+    public $incrementing = true;
     
     protected $fillable = [
         'intervention_id',

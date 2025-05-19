@@ -46,38 +46,40 @@ class InterventionController extends BaseApiController
      * @return JsonResponse
      */
     public function store(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), $this->validationRules);
-        
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-        
-        // Begin transaction
-        DB::beginTransaction();
-        
-        try {
-            // Create intervention
-            $intervention = Intervention::create($request->all());
-            
-            // Attach users if provided
-            if ($request->has('utilisateurs') && is_array($request->utilisateurs)) {
-                $intervention->utilisateurs()->sync($request->utilisateurs);
-            }
-            
-            // Commit the transaction
-            DB::commit();
-            
-            // Load relations
-            $intervention->load($this->relations);
-            
-            return response()->json(['data' => $intervention, 'message' => 'Intervention created successfully'], 201);
-        } catch (\Exception $e) {
-            // Rollback in case of error
-            DB::rollback();
-            return response()->json(['message' => 'Error creating intervention', 'error' => $e->getMessage()], 500);
-        }
+{
+    $validator = Validator::make($request->all(), $this->validationRules);
+    
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
     }
+    
+    // Begin transaction
+    DB::beginTransaction();
+    
+    try {
+        // Use the parent class store method which handles ID generation
+        $response = parent::store($request);
+        $intervention = json_decode($response->getContent())->data;
+        
+        // Attach users if provided
+        if ($request->has('utilisateurs') && is_array($request->utilisateurs)) {
+            $model = $this->model::find($intervention->id);
+            $model->utilisateurs()->sync($request->utilisateurs);
+            
+            // Update the intervention object with relations
+            $intervention = $model->load($this->relations);
+        }
+        
+        // Commit the transaction
+        DB::commit();
+        
+        return response()->json(['data' => $intervention, 'message' => 'Intervention created successfully'], 201);
+    } catch (\Exception $e) {
+        // Rollback in case of error
+        DB::rollback();
+        return response()->json(['message' => 'Error creating intervention', 'error' => $e->getMessage()], 500);
+    }
+}
     
     /**
      * Update intervention with associated users.

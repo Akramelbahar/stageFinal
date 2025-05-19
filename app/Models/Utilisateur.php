@@ -11,7 +11,7 @@ class Utilisateur extends Authenticatable
 
     protected $table = 'Utilisateur';
     public $timestamps = false;
-    public $incrementing = false; // Tell Laravel this is not auto-incrementing
+    public $incrementing = true; // Tell Laravel this is not auto-incrementing
     
     protected $fillable = [
         'id',

@@ -14,7 +14,7 @@ class MaintenancePiece extends Model
     
     // Since we have a composite primary key
     protected $primaryKey = null;
-    public $incrementing = false;
+    public $incrementing = true;
     
     protected $fillable = [
         'maintenance_id',

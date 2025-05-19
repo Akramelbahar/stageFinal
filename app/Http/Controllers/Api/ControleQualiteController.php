@@ -36,43 +36,56 @@ class ControleQualiteController extends BaseApiController
      * @param Request $request
      * @return JsonResponse
      */
-    public function store(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), $this->validationRules);
-        
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-        
-        // Check if controle already exists for this intervention
-        $existingControle = ControleQualite::where('intervention_id', $request->intervention_id)->first();
-        if ($existingControle) {
-            return response()->json([
-                'message' => 'A controle qualite already exists for this intervention',
-                'data' => $existingControle
-            ], 422);
-        }
-        
-        // Begin transaction
-        DB::beginTransaction();
-        
-        try {
-            // Create controle
-            $controle = ControleQualite::create($request->all());
-            
-            // Commit the transaction
-            DB::commit();
-            
-            // Load relations
-            $controle->load($this->relations);
-            
-            return response()->json(['data' => $controle, 'message' => 'Controle qualite created successfully'], 201);
-        } catch (\Exception $e) {
-            // Rollback in case of error
-            DB::rollback();
-            return response()->json(['message' => 'Error creating controle qualite', 'error' => $e->getMessage()], 500);
-        }
+    /**
+ * Store a newly created controle qualite.
+ *
+ * @param Request $request
+ * @return JsonResponse
+ */
+public function store(Request $request): JsonResponse
+{
+    $validator = Validator::make($request->all(), $this->validationRules);
+    
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
     }
+    
+    // Check if controle already exists for this intervention
+    $existingControle = ControleQualite::where('intervention_id', $request->intervention_id)->first();
+    if ($existingControle) {
+        return response()->json([
+            'message' => 'A controle qualite already exists for this intervention',
+            'data' => $existingControle
+        ], 422);
+    }
+    
+    // Begin transaction
+    DB::beginTransaction();
+    
+    try {
+        // Create data array from request
+        $data = $request->all();
+        
+        // Generate a new ID
+        $maxId = ControleQualite::max('id') ?? 0;
+        $data['id'] = $maxId + 1;
+        
+        // Create controle with generated ID
+        $controle = ControleQualite::create($data);
+        
+        // Commit the transaction
+        DB::commit();
+        
+        // Load relations
+        $controle->load($this->relations);
+        
+        return response()->json(['data' => $controle, 'message' => 'Controle qualite created successfully'], 201);
+    } catch (\Exception $e) {
+        // Rollback in case of error
+        DB::rollback();
+        return response()->json(['message' => 'Error creating controle qualite', 'error' => $e->getMessage()], 500);
+    }
+}
     
     /**
      * Update controle qualite.

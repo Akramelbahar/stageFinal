@@ -13,7 +13,7 @@ class Rapport extends Model
     public $timestamps = false;
     
     // Add these lines
-    public $incrementing = false;
+    public $incrementing = true;
     protected $keyType = 'integer';
     
     protected $fillable = [
