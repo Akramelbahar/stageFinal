@@ -1,65 +1,56 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
-  RiAddLine, RiSearchLine, RiEdit2Line, 
-  RiDeleteBin6Line, RiFileListLine, RiFilterLine,
-  RiCloseCircleLine, RiAlertLine
+  RiAddLine, RiSearchLine, RiFilterLine, 
+  RiEyeLine, RiEdit2Line, RiDeleteBin6Line,
+  RiCloseCircleLine, RiCalendarEventLine, 
+  RiUserLine, RiAlertLine
 } from 'react-icons/ri';
 
 // Components
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import StatusBadge from '../components/common/StatusBadge';
 import useAuth from '../hooks/useAuth';
 
-// API functions
-import { 
-  getAllInterventions, 
-  getInterventionsByStatus,
-  getInterventionsByMachine,
-  deleteIntervention
-} from '../api/interventions';
+// API functions - You'll need to create these in src/api/planifications.js
+const getAllPlanifications = async () => {
+  // Implement this function to fetch planifications from your backend
+  return { data: [] }; // Placeholder
+};
 
-const Interventions = () => {
-  const { hasPermission } = useAuth();
-  const navigate = useNavigate();
-  const [interventions, setInterventions] = useState([]);
+const deletePlanification = async (id) => {
+  // Implement this function to delete a planification
+};
+
+const Planifications = () => {
+  const { hasPermission, user } = useAuth();
+  const [planifications, setPlanifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterMachine, setFilterMachine] = useState('');
-  const [sortField, setSortField] = useState('date');
+  const [filterUser, setFilterUser] = useState('');
+  const [sortField, setSortField] = useState('dateCreation');
   const [sortDirection, setSortDirection] = useState('desc');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  // Fetch interventions data
+  // Fetch planifications data
   useEffect(() => {
-    const fetchInterventions = async () => {
+    const fetchPlanifications = async () => {
       setLoading(true);
       setError(null);
       try {
-        let response;
-        
-        if (filterStatus) {
-          response = await getInterventionsByStatus(filterStatus);
-        } else if (filterMachine) {
-          response = await getInterventionsByMachine(filterMachine);
-        } else {
-          response = await getAllInterventions();
-        }
-        
-        setInterventions(response.data || []);
+        const response = await getAllPlanifications();
+        setPlanifications(response.data || []);
       } catch (err) {
-        console.error('Error fetching interventions:', err);
-        setError('Erreur lors du chargement des interventions');
+        console.error('Error fetching planifications:', err);
+        setError('Erreur lors du chargement des planifications');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchInterventions();
-  }, [filterStatus, filterMachine]);
+    fetchPlanifications();
+  }, []);
 
   // Handle sort
   const handleSort = (field) => {
@@ -71,36 +62,48 @@ const Interventions = () => {
     }
   };
 
-  // Handle intervention deletion
-  const handleDeleteIntervention = async (id) => {
+  // Handle planification deletion
+  const handleDeletePlanification = async (id) => {
     try {
-      await deleteIntervention(id);
-      setInterventions((prevInterventions) => 
-        prevInterventions.filter(intervention => intervention.id !== id)
+      await deletePlanification(id);
+      setPlanifications((prevPlanifications) => 
+        prevPlanifications.filter(planification => planification.id !== id)
       );
       setDeleteConfirm(null);
     } catch (err) {
-      console.error('Error deleting intervention:', err);
-      setError('Erreur lors de la suppression de l\'intervention');
+      console.error('Error deleting planification:', err);
+      setError('Erreur lors de la suppression de la planification');
     }
   };
 
-  // Filter interventions based on search term
-  const filteredInterventions = interventions.filter(intervention => 
-    (intervention.description && intervention.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (intervention.typeOperation && intervention.typeOperation.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (intervention.machine && intervention.machine.nom && intervention.machine.nom.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (intervention.id && intervention.id.toString().includes(searchTerm))
+  // Filter planifications based on search term
+  const filteredPlanifications = planifications.filter(planification => 
+    (planification.utilisateur && planification.utilisateur.nom && 
+     planification.utilisateur.nom.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (planification.id && planification.id.toString().includes(searchTerm)) ||
+    (planification.interventions && 
+     planification.interventions.some(intervention => 
+       intervention.machine && 
+       intervention.machine.nom.toLowerCase().includes(searchTerm.toLowerCase())
+     ))
   );
 
-  // Sort filtered interventions
-  const sortedInterventions = [...filteredInterventions].sort((a, b) => {
+  // Filter by user if specified
+  const userFilteredPlanifications = filterUser 
+    ? filteredPlanifications.filter(plan => plan.utilisateur && plan.utilisateur.id === parseInt(filterUser))
+    : filteredPlanifications;
+
+  // Sort filtered planifications
+  const sortedPlanifications = [...userFilteredPlanifications].sort((a, b) => {
     let valA = a[sortField];
     let valB = b[sortField];
     
-    if (sortField === 'machine') {
-      valA = a.machine ? a.machine.nom : '';
-      valB = b.machine ? b.machine.nom : '';
+    if (sortField === 'utilisateur') {
+      valA = a.utilisateur?.nom || '';
+      valB = b.utilisateur?.nom || '';
+    } else if (sortField === 'interventionsCount') {
+      valA = a.interventions?.length || 0;
+      valB = b.interventions?.length || 0;
     }
     
     if (typeof valA === 'string') valA = valA.toLowerCase();
@@ -132,15 +135,15 @@ const Interventions = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Interventions</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Planification</h1>
         
-        {hasPermission('intervention-create') && (
-          <Link to="/interventions/new">
+        {hasPermission('planification-create') && (
+          <Link to="/planifications/new">
             <Button 
               variant="primary"
               icon={<RiAddLine />}
             >
-              Nouvelle intervention
+              Nouvelle planification
             </Button>
           </Link>
         )}
@@ -158,7 +161,7 @@ const Interventions = () => {
           <div className="relative flex-grow">
             <input
               type="text"
-              placeholder="Rechercher une intervention..."
+              placeholder="Rechercher par utilisateur ou machine..."
               className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -170,23 +173,20 @@ const Interventions = () => {
             <div className="relative">
               <select
                 className="w-full appearance-none pl-4 pr-10 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={filterStatus}
-                onChange={e => setFilterStatus(e.target.value)}
+                value={filterUser}
+                onChange={e => setFilterUser(e.target.value)}
               >
-                <option value="">Tous les statuts</option>
-                <option value="PENDING">En attente</option>
-                <option value="PLANNED">Planifiée</option>
-                <option value="IN_PROGRESS">En cours</option>
-                <option value="COMPLETED">Terminée</option>
-                <option value="CANCELLED">Annulée</option>
+                <option value="">Tous les utilisateurs</option>
+                {/* You would populate this with actual user data */}
+                <option value={user?.id || ''}>Mes planifications</option>
               </select>
               <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                 <RiFilterLine className="text-gray-400" />
               </div>
-              {filterStatus && (
+              {filterUser && (
                 <button 
                   className="absolute right-8 top-2.5 text-gray-400 hover:text-gray-600"
-                  onClick={() => setFilterStatus('')}
+                  onClick={() => setFilterUser('')}
                 >
                   <RiCloseCircleLine />
                 </button>
@@ -195,9 +195,23 @@ const Interventions = () => {
           </div>
         </div>
         
-        {filteredInterventions.length === 0 ? (
+        {sortedPlanifications.length === 0 ? (
           <div className="text-center py-10 text-gray-500">
-            Aucune intervention trouvée
+            <RiCalendarEventLine className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <p className="text-lg font-medium">Aucune planification trouvée</p>
+            <p className="text-sm mt-1">Les planifications apparaîtront ici une fois créées</p>
+            
+            {hasPermission('planification-create') && (
+              <Link to="/planifications/new">
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  icon={<RiAddLine />}
+                >
+                  Créer une planification
+                </Button>
+              </Link>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -217,42 +231,38 @@ const Interventions = () => {
                   <th 
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('date')}
+                    onClick={() => handleSort('dateCreation')}
                   >
                     Date
-                    {sortField === 'date' && (
+                    {sortField === 'dateCreation' && (
                       <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </th>
                   <th 
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('typeOperation')}
+                    onClick={() => handleSort('utilisateur')}
                   >
-                    Type
-                    {sortField === 'typeOperation' && (
+                    Responsable
+                    {sortField === 'utilisateur' && (
                       <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </th>
                   <th 
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('machine')}
+                    onClick={() => handleSort('interventionsCount')}
                   >
-                    Machine
-                    {sortField === 'machine' && (
+                    Interventions
+                    {sortField === 'interventionsCount' && (
                       <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </th>
                   <th 
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('statut')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Statut
-                    {sortField === 'statut' && (
-                      <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                    )}
+                    Disponibilité
                   </th>
                   <th 
                     scope="col"
@@ -263,50 +273,55 @@ const Interventions = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sortedInterventions.map((intervention) => (
-                  <tr key={intervention.id} className="hover:bg-gray-50">
+                {sortedPlanifications.map((planification) => (
+                  <tr key={planification.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {intervention.id}
+                      {planification.id}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(intervention.date)}
+                      {formatDate(planification.dateCreation)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                      {intervention.typeOperation}
-                      {intervention.urgence && (
-                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-                          Urgent
-                        </span>
-                      )}
+                      <div className="flex items-center">
+                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3">
+                          <RiUserLine />
+                        </div>
+                        <span>{planification.utilisateur?.nom || 'N/A'}</span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                      {intervention.machine && (
-                        <Link 
-                          to={`/machines/${intervention.machine.id}`}
-                          className="hover:text-blue-600"
-                        >
-                          {intervention.machine.nom}
-                        </Link>
-                      )}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{planification.interventions?.length || 0} intervention(s)</span>
+                        <span className="text-xs text-gray-500 mt-1">Capacité: {planification.capaciteExecution || 'N/A'}</span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={intervention.statut} />
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                      <div className="flex flex-col space-y-1">
+                        <div className="flex items-center">
+                          <span className={`inline-block w-3 h-3 rounded-full mr-2 ${planification.urgencePrise ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                          <span>Urgence</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className={`inline-block w-3 h-3 rounded-full mr-2 ${planification.disponibilitePDR ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                          <span>Pièces</span>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
-                        {hasPermission('intervention-view') && (
-                          <Link to={`/interventions/${intervention.id}`}>
+                        {hasPermission('planification-view') && (
+                          <Link to={`/planifications/${planification.id}`}>
                             <Button 
                               variant="outline" 
                               size="sm"
-                              icon={<RiFileListLine />}
+                              icon={<RiEyeLine />}
                               title="Voir les détails"
                             />
                           </Link>
                         )}
                         
-                        {hasPermission('intervention-edit') && intervention.statut !== 'COMPLETED' && (
-                          <Link to={`/interventions/${intervention.id}/edit`}>
+                        {hasPermission('planification-edit') && (
+                          <Link to={`/planifications/${planification.id}/edit`}>
                             <Button 
                               variant="outline" 
                               size="sm"
@@ -316,14 +331,14 @@ const Interventions = () => {
                           </Link>
                         )}
                         
-                        {hasPermission('intervention-delete') && (
+                        {hasPermission('planification-delete') && (
                           <Button 
                             variant="outline" 
                             size="sm"
                             className="text-red-600 hover:bg-red-50"
                             icon={<RiDeleteBin6Line />}
                             title="Supprimer"
-                            onClick={() => setDeleteConfirm(intervention.id)}
+                            onClick={() => setDeleteConfirm(planification.id)}
                           />
                         )}
                       </div>
@@ -342,7 +357,7 @@ const Interventions = () => {
           <div className="bg-white rounded-lg p-6 max-w-md mx-auto">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Confirmer la suppression</h3>
             <p className="text-sm text-gray-500 mb-4">
-              Êtes-vous sûr de vouloir supprimer cette intervention ? 
+              Êtes-vous sûr de vouloir supprimer cette planification ? 
               Cette action est irréversible.
             </p>
             <div className="flex justify-end space-x-3">
@@ -356,7 +371,7 @@ const Interventions = () => {
               <Button 
                 variant="danger" 
                 size="sm"
-                onClick={() => handleDeleteIntervention(deleteConfirm)}
+                onClick={() => handleDeletePlanification(deleteConfirm)}
               >
                 Supprimer
               </Button>
@@ -368,4 +383,4 @@ const Interventions = () => {
   );
 };
 
-export default Interventions;
+export default Planifications;

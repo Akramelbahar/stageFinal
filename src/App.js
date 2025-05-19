@@ -16,16 +16,24 @@ import Dashboard from './pages/Dashboard';
 import Machines from './pages/Machines';
 import MachineDetail from './pages/MachineDetail';
 import MachineForm from './pages/MachineForm';
+import Interventions from './pages/Interventions';
+import Diagnostics from './pages/Diagnostics';
+import Planifications from './pages/Planifications';
+import ControleQualite from './pages/ControleQualite';
+import Rapports from './pages/Rapports';
+import Utilisateurs from './pages/admin/Utilisateurs';
+import RolesPermissions from './pages/admin/RolesPermissions';
+import Sections from './pages/admin/Sections';
 import ForbiddenPage from './pages/ForbiddenPage';
 import NotFoundPage from './pages/NotFoundPage';
 
-// Other pages to be implemented later
-const Interventions = () => <div>Interventions Page (Coming Soon)</div>;
-const Diagnostics = () => <div>Diagnostics Page (Coming Soon)</div>;
-const Planifications = () => <div>Planifications Page (Coming Soon)</div>;
-const Controles = () => <div>Contrôles Qualité Page (Coming Soon)</div>;
-const Rapports = () => <div>Rapports Page (Coming Soon)</div>;
-const Admin = () => <div>Admin Page (Coming Soon)</div>;
+// Create a simple Sections component as placeholder until implemented
+const SectionsPlaceholder = () => (
+  <div className="p-8">
+    <h1 className="text-2xl font-bold mb-4">Gestion des Sections</h1>
+    <p>Cette fonctionnalité sera implémentée prochainement.</p>
+  </div>
+);
 
 const App = () => {
   return (
@@ -84,7 +92,7 @@ const App = () => {
             
             {/* Interventions */}
             <Route 
-              path="/interventions/*" 
+              path="/interventions" 
               element={
                 <ProtectedRoute requiredPermission="intervention-list">
                   <Interventions />
@@ -94,7 +102,7 @@ const App = () => {
             
             {/* Diagnostics */}
             <Route 
-              path="/diagnostics/*" 
+              path="/diagnostics" 
               element={
                 <ProtectedRoute requiredPermission="diagnostic-list">
                   <Diagnostics />
@@ -104,7 +112,7 @@ const App = () => {
             
             {/* Planifications */}
             <Route 
-              path="/planifications/*" 
+              path="/planifications" 
               element={
                 <ProtectedRoute requiredPermission="planification-list">
                   <Planifications />
@@ -114,17 +122,17 @@ const App = () => {
             
             {/* Contrôles Qualité */}
             <Route 
-              path="/controles/*" 
+              path="/controles" 
               element={
                 <ProtectedRoute requiredPermission="controle-list">
-                  <Controles />
+                  <ControleQualite />
                 </ProtectedRoute>
               } 
             />
             
             {/* Rapports */}
             <Route 
-              path="/rapports/*" 
+              path="/rapports" 
               element={
                 <ProtectedRoute requiredPermission="rapport-list">
                   <Rapports />
@@ -132,15 +140,44 @@ const App = () => {
               } 
             />
             
-            {/* Admin */}
-            <Route 
-              path="/admin/*" 
-              element={
-                <ProtectedRoute requiredPermission="admin-roles">
-                  <Admin />
-                </ProtectedRoute>
-              } 
-            />
+            {/* Admin Routes */}
+            <Route path="/admin">
+              {/* Utilisateurs */}
+              <Route 
+                path="utilisateurs" 
+                element={
+                  <ProtectedRoute requiredPermission="utilisateur-list">
+                    <Utilisateurs />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Roles & Permissions */}
+              <Route 
+                path="roles" 
+                element={
+                  <ProtectedRoute requiredPermission="admin-roles">
+                    <RolesPermissions />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Sections */}
+              <Route 
+                path="sections" 
+                element={
+                  <ProtectedRoute requiredPermission="section-list">
+                    <Sections />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Admin root - redirect to Utilisateurs */}
+              <Route 
+                path="" 
+                element={<Navigate to="/admin/utilisateurs" replace />} 
+              />
+            </Route>
             
             {/* 404 catch-all */}
             <Route path="*" element={<NotFoundPage />} />

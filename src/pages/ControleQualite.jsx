@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
-  RiAddLine, RiSearchLine, RiEdit2Line, 
-  RiDeleteBin6Line, RiFileListLine, RiFilterLine,
-  RiCloseCircleLine, RiAlertLine
+  RiAddLine, RiSearchLine, RiFilterLine, 
+  RiEyeLine, RiEdit2Line, RiDeleteBin6Line,
+  RiCloseCircleLine, RiAlertLine, RiCheckboxCircleLine
 } from 'react-icons/ri';
 
 // Components
@@ -12,54 +12,45 @@ import Button from '../components/common/Button';
 import StatusBadge from '../components/common/StatusBadge';
 import useAuth from '../hooks/useAuth';
 
-// API functions
-import { 
-  getAllInterventions, 
-  getInterventionsByStatus,
-  getInterventionsByMachine,
-  deleteIntervention
-} from '../api/interventions';
+// API functions - You'll need to create these in src/api/controles.js
+const getAllControles = async () => {
+  // Implement this function to fetch controles from your backend
+  return { data: [] }; // Placeholder
+};
 
-const Interventions = () => {
+const deleteControle = async (id) => {
+  // Implement this function to delete a controle
+};
+
+const ControleQualite = () => {
   const { hasPermission } = useAuth();
-  const navigate = useNavigate();
-  const [interventions, setInterventions] = useState([]);
+  const [controles, setControles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
   const [filterMachine, setFilterMachine] = useState('');
-  const [sortField, setSortField] = useState('date');
+  const [sortField, setSortField] = useState('dateControle');
   const [sortDirection, setSortDirection] = useState('desc');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  // Fetch interventions data
+  // Fetch controles data
   useEffect(() => {
-    const fetchInterventions = async () => {
+    const fetchControles = async () => {
       setLoading(true);
       setError(null);
       try {
-        let response;
-        
-        if (filterStatus) {
-          response = await getInterventionsByStatus(filterStatus);
-        } else if (filterMachine) {
-          response = await getInterventionsByMachine(filterMachine);
-        } else {
-          response = await getAllInterventions();
-        }
-        
-        setInterventions(response.data || []);
+        const response = await getAllControles();
+        setControles(response.data || []);
       } catch (err) {
-        console.error('Error fetching interventions:', err);
-        setError('Erreur lors du chargement des interventions');
+        console.error('Error fetching controles:', err);
+        setError('Erreur lors du chargement des contrôles qualité');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchInterventions();
-  }, [filterStatus, filterMachine]);
+    fetchControles();
+  }, []);
 
   // Handle sort
   const handleSort = (field) => {
@@ -71,36 +62,49 @@ const Interventions = () => {
     }
   };
 
-  // Handle intervention deletion
-  const handleDeleteIntervention = async (id) => {
+  // Handle controle deletion
+  const handleDeleteControle = async (id) => {
     try {
-      await deleteIntervention(id);
-      setInterventions((prevInterventions) => 
-        prevInterventions.filter(intervention => intervention.id !== id)
+      await deleteControle(id);
+      setControles((prevControles) => 
+        prevControles.filter(controle => controle.id !== id)
       );
       setDeleteConfirm(null);
     } catch (err) {
-      console.error('Error deleting intervention:', err);
-      setError('Erreur lors de la suppression de l\'intervention');
+      console.error('Error deleting controle:', err);
+      setError('Erreur lors de la suppression du contrôle qualité');
     }
   };
 
-  // Filter interventions based on search term
-  const filteredInterventions = interventions.filter(intervention => 
-    (intervention.description && intervention.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (intervention.typeOperation && intervention.typeOperation.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (intervention.machine && intervention.machine.nom && intervention.machine.nom.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (intervention.id && intervention.id.toString().includes(searchTerm))
+  // Filter controles based on search term
+  const filteredControles = controles.filter(controle => 
+    (controle.intervention && controle.intervention.description && 
+     controle.intervention.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (controle.intervention && controle.intervention.machine && 
+     controle.intervention.machine.nom && 
+     controle.intervention.machine.nom.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (controle.id && controle.id.toString().includes(searchTerm))
   );
 
-  // Sort filtered interventions
-  const sortedInterventions = [...filteredInterventions].sort((a, b) => {
+  // Filter by machine if specified
+  const machineFilteredControles = filterMachine 
+    ? filteredControles.filter(controle => 
+        controle.intervention && 
+        controle.intervention.machine && 
+        controle.intervention.machine.id === parseInt(filterMachine))
+    : filteredControles;
+
+  // Sort filtered controles
+  const sortedControles = [...machineFilteredControles].sort((a, b) => {
     let valA = a[sortField];
     let valB = b[sortField];
     
     if (sortField === 'machine') {
-      valA = a.machine ? a.machine.nom : '';
-      valB = b.machine ? b.machine.nom : '';
+      valA = a.intervention?.machine?.nom || '';
+      valB = b.intervention?.machine?.nom || '';
+    } else if (sortField === 'intervention') {
+      valA = a.intervention?.id || '';
+      valB = b.intervention?.id || '';
     }
     
     if (typeof valA === 'string') valA = valA.toLowerCase();
@@ -121,6 +125,16 @@ const Interventions = () => {
     });
   };
 
+  // Get all unique machines from controles
+  const machines = [...new Map(
+    controles
+      .filter(controle => controle.intervention && controle.intervention.machine)
+      .map(controle => [
+        controle.intervention.machine.id, 
+        controle.intervention.machine
+      ])
+  ).values()];
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -132,15 +146,15 @@ const Interventions = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Interventions</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Contrôle Qualité</h1>
         
-        {hasPermission('intervention-create') && (
-          <Link to="/interventions/new">
+        {hasPermission('controle-create') && (
+          <Link to="/controles/new">
             <Button 
               variant="primary"
               icon={<RiAddLine />}
             >
-              Nouvelle intervention
+              Nouveau contrôle
             </Button>
           </Link>
         )}
@@ -158,7 +172,7 @@ const Interventions = () => {
           <div className="relative flex-grow">
             <input
               type="text"
-              placeholder="Rechercher une intervention..."
+              placeholder="Rechercher par machine ou intervention..."
               className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -170,23 +184,23 @@ const Interventions = () => {
             <div className="relative">
               <select
                 className="w-full appearance-none pl-4 pr-10 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={filterStatus}
-                onChange={e => setFilterStatus(e.target.value)}
+                value={filterMachine}
+                onChange={e => setFilterMachine(e.target.value)}
               >
-                <option value="">Tous les statuts</option>
-                <option value="PENDING">En attente</option>
-                <option value="PLANNED">Planifiée</option>
-                <option value="IN_PROGRESS">En cours</option>
-                <option value="COMPLETED">Terminée</option>
-                <option value="CANCELLED">Annulée</option>
+                <option value="">Toutes les machines</option>
+                {machines.map(machine => (
+                  <option key={machine.id} value={machine.id}>
+                    {machine.nom}
+                  </option>
+                ))}
               </select>
               <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                 <RiFilterLine className="text-gray-400" />
               </div>
-              {filterStatus && (
+              {filterMachine && (
                 <button 
                   className="absolute right-8 top-2.5 text-gray-400 hover:text-gray-600"
-                  onClick={() => setFilterStatus('')}
+                  onClick={() => setFilterMachine('')}
                 >
                   <RiCloseCircleLine />
                 </button>
@@ -195,9 +209,23 @@ const Interventions = () => {
           </div>
         </div>
         
-        {filteredInterventions.length === 0 ? (
+        {sortedControles.length === 0 ? (
           <div className="text-center py-10 text-gray-500">
-            Aucune intervention trouvée
+            <RiCheckboxCircleLine className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <p className="text-lg font-medium">Aucun contrôle qualité trouvé</p>
+            <p className="text-sm mt-1">Les contrôles qualité apparaîtront ici une fois créés</p>
+            
+            {hasPermission('controle-create') && (
+              <Link to="/controles/new">
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  icon={<RiAddLine />}
+                >
+                  Créer un contrôle qualité
+                </Button>
+              </Link>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -217,20 +245,20 @@ const Interventions = () => {
                   <th 
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('date')}
+                    onClick={() => handleSort('dateControle')}
                   >
                     Date
-                    {sortField === 'date' && (
+                    {sortField === 'dateControle' && (
                       <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </th>
                   <th 
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('typeOperation')}
+                    onClick={() => handleSort('intervention')}
                   >
-                    Type
-                    {sortField === 'typeOperation' && (
+                    Intervention
+                    {sortField === 'intervention' && (
                       <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </th>
@@ -246,13 +274,9 @@ const Interventions = () => {
                   </th>
                   <th 
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('statut')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Statut
-                    {sortField === 'statut' && (
-                      <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                    )}
+                    Tests effectués
                   </th>
                   <th 
                     scope="col"
@@ -263,50 +287,73 @@ const Interventions = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sortedInterventions.map((intervention) => (
-                  <tr key={intervention.id} className="hover:bg-gray-50">
+                {sortedControles.map((controle) => (
+                  <tr key={controle.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {intervention.id}
+                      {controle.id}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(intervention.date)}
+                      {formatDate(controle.dateControle)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                      {intervention.typeOperation}
-                      {intervention.urgence && (
-                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-                          Urgent
-                        </span>
+                      {controle.intervention && (
+                        <Link 
+                          to={`/interventions/${controle.intervention.id}`}
+                          className="hover:text-blue-600"
+                        >
+                          {`#${controle.intervention.id} - ${controle.intervention.typeOperation || 'Intervention'}`}
+                        </Link>
+                      )}
+                      {controle.intervention?.statut && (
+                        <div className="mt-1">
+                          <StatusBadge status={controle.intervention.statut} />
+                        </div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                      {intervention.machine && (
+                      {controle.intervention?.machine && (
                         <Link 
-                          to={`/machines/${intervention.machine.id}`}
+                          to={`/machines/${controle.intervention.machine.id}`}
                           className="hover:text-blue-600"
                         >
-                          {intervention.machine.nom}
+                          {controle.intervention.machine.nom}
                         </Link>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={intervention.statut} />
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      <div className="flex flex-col space-y-1">
+                        {controle.resultatsEssais && (
+                          <span className="inline-flex items-center">
+                            <span className="w-3 h-3 rounded-full bg-green-500 mr-2"></span>
+                            <span>Essais réalisés</span>
+                          </span>
+                        )}
+                        {controle.analyseVibratoire && (
+                          <span className="inline-flex items-center">
+                            <span className="w-3 h-3 rounded-full bg-green-500 mr-2"></span>
+                            <span>Analyse vibratoire</span>
+                          </span>
+                        )}
+                        {!controle.resultatsEssais && !controle.analyseVibratoire && (
+                          <span className="text-gray-400 italic">Aucun test spécifié</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
-                        {hasPermission('intervention-view') && (
-                          <Link to={`/interventions/${intervention.id}`}>
+                        {hasPermission('controle-view') && (
+                          <Link to={`/controles/${controle.id}`}>
                             <Button 
                               variant="outline" 
                               size="sm"
-                              icon={<RiFileListLine />}
+                              icon={<RiEyeLine />}
                               title="Voir les détails"
                             />
                           </Link>
                         )}
                         
-                        {hasPermission('intervention-edit') && intervention.statut !== 'COMPLETED' && (
-                          <Link to={`/interventions/${intervention.id}/edit`}>
+                        {hasPermission('controle-edit') && (
+                          <Link to={`/controles/${controle.id}/edit`}>
                             <Button 
                               variant="outline" 
                               size="sm"
@@ -316,14 +363,14 @@ const Interventions = () => {
                           </Link>
                         )}
                         
-                        {hasPermission('intervention-delete') && (
+                        {hasPermission('controle-delete') && (
                           <Button 
                             variant="outline" 
                             size="sm"
                             className="text-red-600 hover:bg-red-50"
                             icon={<RiDeleteBin6Line />}
                             title="Supprimer"
-                            onClick={() => setDeleteConfirm(intervention.id)}
+                            onClick={() => setDeleteConfirm(controle.id)}
                           />
                         )}
                       </div>
@@ -342,7 +389,7 @@ const Interventions = () => {
           <div className="bg-white rounded-lg p-6 max-w-md mx-auto">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Confirmer la suppression</h3>
             <p className="text-sm text-gray-500 mb-4">
-              Êtes-vous sûr de vouloir supprimer cette intervention ? 
+              Êtes-vous sûr de vouloir supprimer ce contrôle qualité ? 
               Cette action est irréversible.
             </p>
             <div className="flex justify-end space-x-3">
@@ -356,7 +403,7 @@ const Interventions = () => {
               <Button 
                 variant="danger" 
                 size="sm"
-                onClick={() => handleDeleteIntervention(deleteConfirm)}
+                onClick={() => handleDeleteControle(deleteConfirm)}
               >
                 Supprimer
               </Button>
@@ -368,4 +415,4 @@ const Interventions = () => {
   );
 };
 
-export default Interventions;
+export default ControleQualite;
