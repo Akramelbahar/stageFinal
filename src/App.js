@@ -17,23 +17,23 @@ import Machines from './pages/Machines';
 import MachineDetail from './pages/MachineDetail';
 import MachineForm from './pages/MachineForm';
 import Interventions from './pages/Interventions';
+import InterventionForm from './pages/InterventionForm';
 import Diagnostics from './pages/Diagnostics';
+import DiagnosticForm from './pages/DiagnosticForm';
 import Planifications from './pages/Planifications';
+import PlanificationForm from './pages/PlanificationForm';
 import ControleQualite from './pages/ControleQualite';
+import ControleQualiteForm from './pages/ControleQualiteForm';
 import Rapports from './pages/Rapports';
+import RapportForm from './pages/RapportForm';
 import Utilisateurs from './pages/admin/Utilisateurs';
+import UtilisateurForm from './pages/admin/UtilisateurForm';
 import RolesPermissions from './pages/admin/RolesPermissions';
+import RoleForm from './pages/admin/RoleForm';
 import Sections from './pages/admin/Sections';
+import SectionForm from './pages/admin/SectionForm';
 import ForbiddenPage from './pages/ForbiddenPage';
 import NotFoundPage from './pages/NotFoundPage';
-
-// Create a simple Sections component as placeholder until implemented
-const SectionsPlaceholder = () => (
-  <div className="p-8">
-    <h1 className="text-2xl font-bold mb-4">Gestion des Sections</h1>
-    <p>Cette fonctionnalité sera implémentée prochainement.</p>
-  </div>
-);
 
 const App = () => {
   return (
@@ -99,6 +99,22 @@ const App = () => {
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/interventions/new" 
+              element={
+                <ProtectedRoute requiredPermission="intervention-create">
+                  <InterventionForm />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/interventions/:id/edit" 
+              element={
+                <ProtectedRoute requiredPermission="intervention-edit">
+                  <InterventionForm />
+                </ProtectedRoute>
+              } 
+            />
             
             {/* Diagnostics */}
             <Route 
@@ -106,6 +122,22 @@ const App = () => {
               element={
                 <ProtectedRoute requiredPermission="diagnostic-list">
                   <Diagnostics />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/diagnostics/new" 
+              element={
+                <ProtectedRoute requiredPermission="diagnostic-create">
+                  <DiagnosticForm />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/diagnostics/:id/edit" 
+              element={
+                <ProtectedRoute requiredPermission="diagnostic-edit">
+                  <DiagnosticForm />
                 </ProtectedRoute>
               } 
             />
@@ -119,6 +151,22 @@ const App = () => {
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/planifications/new" 
+              element={
+                <ProtectedRoute requiredPermission="planification-create">
+                  <PlanificationForm />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/planifications/:id/edit" 
+              element={
+                <ProtectedRoute requiredPermission="planification-edit">
+                  <PlanificationForm />
+                </ProtectedRoute>
+              } 
+            />
             
             {/* Contrôles Qualité */}
             <Route 
@@ -129,6 +177,22 @@ const App = () => {
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/controles/new" 
+              element={
+                <ProtectedRoute requiredPermission="controle-create">
+                  <ControleQualiteForm />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/controles/:id/edit" 
+              element={
+                <ProtectedRoute requiredPermission="controle-edit">
+                  <ControleQualiteForm />
+                </ProtectedRoute>
+              } 
+            />
             
             {/* Rapports */}
             <Route 
@@ -136,6 +200,22 @@ const App = () => {
               element={
                 <ProtectedRoute requiredPermission="rapport-list">
                   <Rapports />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/rapports/new" 
+              element={
+                <ProtectedRoute requiredPermission="rapport-create">
+                  <RapportForm />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/rapports/:id/edit" 
+              element={
+                <ProtectedRoute requiredPermission="rapport-edit">
+                  <RapportForm />
                 </ProtectedRoute>
               } 
             />
@@ -151,6 +231,22 @@ const App = () => {
                   </ProtectedRoute>
                 } 
               />
+              <Route 
+                path="utilisateurs/new" 
+                element={
+                  <ProtectedRoute requiredPermission="utilisateur-create">
+                    <UtilisateurForm />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="utilisateurs/:id/edit" 
+                element={
+                  <ProtectedRoute requiredPermission="utilisateur-edit">
+                    <UtilisateurForm />
+                  </ProtectedRoute>
+                } 
+              />
               
               {/* Roles & Permissions */}
               <Route 
@@ -161,6 +257,22 @@ const App = () => {
                   </ProtectedRoute>
                 } 
               />
+              <Route 
+                path="roles/new" 
+                element={
+                  <ProtectedRoute requiredPermission="admin-roles">
+                    <RoleForm />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="roles/:id/edit" 
+                element={
+                  <ProtectedRoute requiredPermission="admin-roles">
+                    <RoleForm />
+                  </ProtectedRoute>
+                } 
+              />
               
               {/* Sections */}
               <Route 
@@ -168,6 +280,22 @@ const App = () => {
                 element={
                   <ProtectedRoute requiredPermission="section-list">
                     <Sections />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="sections/new" 
+                element={
+                  <ProtectedRoute requiredPermission="section-create">
+                    <SectionForm />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="sections/:id/edit" 
+                element={
+                  <ProtectedRoute requiredPermission="section-edit">
+                    <SectionForm />
                   </ProtectedRoute>
                 } 
               />
