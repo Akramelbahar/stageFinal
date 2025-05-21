@@ -1,0 +1,742 @@
+{
+	"info": {
+		"_postman_id": "f5d9a3e1-7c8c-4e5a-8f56-8c7e9d2dcb5f",
+		"name": "Electric Machines API",
+		"description": "A complete collection to test the electrical machines management API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.token) {",
+									"    pm.environment.set(\"token\", jsonData.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nom\": \"Admin\",\n    \"password\": \"admin123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"login"
+							]
+						},
+						"description": "Login to get an API token"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Admin User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/utilisateurs/create-admin",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"utilisateurs",
+								"create-admin"
+							]
+						},
+						"description": "Create an admin user with all permissions"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Full Workflow Test",
+			"item": [
+				{
+					"name": "01 - Create Machine",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.environment.set(\"wf_machine_id\", jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nom\": \"Machine Test Workflow\",\n    \"etat\": \"FUNCTIONAL\",\n    \"valeur\": \"20000\",\n    \"dateProchaineMaint\": \"2025-06-30\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/machines",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"machines"
+							]
+						},
+						"description": "Create a machine for workflow test"
+					},
+					"response": []
+				},
+				{
+					"name": "02 - Create Intervention",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.environment.set(\"wf_intervention_id\", jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"date\": \"2025-06-01\",\n    \"description\": \"Maintenance préventive programmée\",\n    \"typeOperation\": \"MAINTENANCE\",\n    \"statut\": \"PENDING\",\n    \"urgence\": false,\n    \"machine_id\": \"{{wf_machine_id}}\",\n    \"utilisateurs\": [1]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/interventions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"interventions"
+							]
+						},
+						"description": "Create an intervention for workflow test"
+					},
+					"response": []
+				},
+				{
+					"name": "03 - Create Diagnostic",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.environment.set(\"wf_diagnostic_id\", jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"dateCreation\": \"2025-06-02\",\n    \"intervention_id\": \"{{wf_intervention_id}}\",\n    \"travaux\": [\"Remplacement des roulements\", \"Vérification alignement\", \"Contrôle vibration\"],\n    \"besoins\": [\"Roulements SKF 6205\", \"Kit d'alignement\", \"Analyseur de vibration\"],\n    \"charges\": [\"Technicien (8h)\", \"Matériel\", \"Outils spécialisés\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/diagnostics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"diagnostics"
+							]
+						},
+						"description": "Create a diagnostic for workflow test"
+					},
+					"response": []
+				},
+				{
+					"name": "04 - Create Planification",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.environment.set(\"wf_planification_id\", jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"dateCreation\": \"2025-06-03\",\n    \"capaciteExecution\": 100,\n    \"urgencePrise\": false,\n    \"disponibilitePDR\": true,\n    \"utilisateur_id\": 1,\n    \"interventions\": [\"{{wf_intervention_id}}\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/planifications",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"planifications"
+							]
+						},
+						"description": "Create a planning for workflow test"
+					},
+					"response": []
+				},
+				{
+					"name": "05 - Create Maintenance",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.intervention_id) {",
+									"    pm.environment.set(\"wf_maintenance_id\", jsonData.data.intervention_id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"intervention_id\": \"{{wf_intervention_id}}\",\n    \"typeMaintenance\": \"PREVENTIVE\",\n    \"duree\": 480,\n    \"pieces\": [\"Roulements SKF 6205\", \"Joint d'étanchéité\", \"Graisse industrielle\", \"Vis de fixation\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/maintenances",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"maintenances"
+							]
+						},
+						"description": "Create a maintenance record for workflow test"
+					},
+					"response": []
+				},
+				{
+					"name": "06 - Create Controle Qualite",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.environment.set(\"wf_controle_id\", jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"dateControle\": \"2025-06-04\",\n    \"resultatsEssais\": \"Tests concluants. Machine fonctionne correctement après maintenance.\",\n    \"analyseVibratoire\": \"Niveaux de vibration dans les normes. Aucune anomalie détectée.\",\n    \"intervention_id\": \"{{wf_intervention_id}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/controles",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"controles"
+							]
+						},
+						"description": "Create a quality control check for workflow test"
+					},
+					"response": []
+				},
+				{
+					"name": "07 - Complete Maintenance",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"machine_etat\": \"MAINTAINED\",\n    \"machine_dateProchaineMaint\": \"2026-06-01\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/maintenances/{{wf_maintenance_id}}/complete",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"maintenances",
+								"{{wf_maintenance_id}}",
+								"complete"
+							]
+						},
+						"description": "Complete the maintenance operation for workflow test"
+					},
+					"response": []
+				},
+				{
+					"name": "08 - Create Rapport",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.environment.set(\"wf_rapport_id\", jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"dateCreation\": \"2025-06-05\",\n    \"contenu\": \"Rapport de maintenance préventive complète. Tous les travaux prévus ont été réalisés avec succès. Roulements remplacés, alignement vérifié et corrigé. Analyse vibratoire effectuée, aucune anomalie détectée. Machine en parfait état de fonctionnement. Prochaine maintenance recommandée dans 12 mois.\",\n    \"validation\": false,\n    \"maintenance_id\": \"{{wf_maintenance_id}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/rapports",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"rapports"
+							]
+						},
+						"description": "Create a report for workflow test"
+					},
+					"response": []
+				},
+				{
+					"name": "09 - Validate Rapport",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/rapports/{{wf_rapport_id}}/validate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"rapports",
+								"{{wf_rapport_id}}",
+								"validate"
+							]
+						},
+						"description": "Validate the report for workflow test"
+					},
+					"response": []
+				},
+				{
+					"name": "10 - Create Gestion Administrative",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.environment.set(\"wf_gestion_id\", jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"commandeAchat\": \"CA-2025-WF123\",\n    \"facturation\": \"FACT-2025-WF456\",\n    \"validation\": false,\n    \"rapport_id\": \"{{wf_rapport_id}}\",\n    \"utilisateurs\": [1]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/gestions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"gestions"
+							]
+						},
+						"description": "Create administrative management for workflow test"
+					},
+					"response": []
+				},
+				{
+					"name": "11 - Validate Gestion Administrative",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/gestions/{{wf_gestion_id}}/validate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"gestions",
+								"{{wf_gestion_id}}",
+								"validate"
+							]
+						},
+						"description": "Validate administrative management for workflow test"
+					},
+					"response": []
+				},
+				{
+					"name": "12 - Check Dashboard Statistics",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/dashboard/statistics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"dashboard",
+								"statistics"
+							]
+						},
+						"description": "Check dashboard statistics after workflow completion"
+					},
+					"response": []
+				}
+			],
+			"description": "Complete workflow test from machine creation to administrative management"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		}
+	]
+}

@@ -1,0 +1,1875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Testing Tool</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .response-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .sidebar {
+            height: calc(100vh - 64px);
+            overflow-y: auto;
+        }
+        .content {
+            height: calc(100vh - 64px);
+            overflow-y: auto;
+        }
+        .endpoint-group {
+            margin-bottom: 0.5rem;
+        }
+        .group-header {
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .endpoint-list {
+            padding-left: 1rem;
+        }
+        .active-endpoint {
+            background-color: #f0f9ff;
+            border-left: 3px solid #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <header class="bg-blue-700 text-white p-4">
+        <h1 class="text-2xl font-bold">Machine Management API Testing Tool</h1>
+    </header>
+
+    <div class="flex">
+        <!-- Sidebar -->
+        <div class="sidebar w-80 bg-white border-r border-gray-200 p-4 text-sm">
+            <div class="mb-4">
+                <div class="bg-blue-100 p-2 rounded mb-2">
+                    <h3 class="font-bold text-blue-800">Authentication Status</h3>
+                    <div id="auth-status" class="text-red-600">Not logged in</div>
+                    <button id="logout-btn" class="hidden mt-2 bg-red-500 text-white px-2 py-1 rounded text-xs">Logout</button>
+                </div>
+            </div>
+            
+            <input type="text" id="endpoint-search" placeholder="Search endpoints..." class="w-full p-2 border border-gray-300 rounded mb-4">
+            
+            <div id="endpoints-container">
+                <!-- Endpoint groups will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content flex-1 p-6">
+            <div id="login-panel" class="bg-white p-6 rounded shadow mb-6">
+                <h2 class="text-xl font-bold mb-4">Login to API</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <input type="text" id="login-username" class="w-full p-2 border border-gray-300 rounded">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="login-password" class="w-full p-2 border border-gray-300 rounded">
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button id="login-btn" class="bg-blue-600 text-white px-4 py-2 rounded">Login</button>
+                </div>
+            </div>
+
+            <div id="endpoint-details" class="hidden">
+                <div class="bg-white p-6 rounded shadow mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-bold" id="endpoint-title"></h2>
+                        <div id="endpoint-method" class="text-sm font-mono bg-gray-200 px-2 py-1 rounded"></div>
+                    </div>
+                    <div class="text-gray-600 mb-4" id="endpoint-description"></div>
+                    <div class="text-sm font-mono bg-gray-100 p-2 rounded mb-6" id="endpoint-url"></div>
+                </div>
+
+                <div class="bg-white p-6 rounded shadow mb-6">
+                    <h3 class="text-lg font-bold mb-4">Request</h3>
+                    
+                    <!-- URL Parameters (for GET, DELETE, etc.) -->
+                    <div id="url-params-container" class="mb-4 hidden">
+                        <h4 class="font-medium mb-2">URL Parameters</h4>
+                        <div id="url-params" class="space-y-2">
+                            <!-- Parameters will be added here -->
+                        </div>
+                    </div>
+
+                    <!-- Request Body (for POST, PUT, etc.) -->
+                    <div id="request-body-container" class="mb-4 hidden">
+                        <h4 class="font-medium mb-2">Request Body</h4>
+                        <div class="flex mb-2">
+                            <button id="form-mode-btn" class="bg-blue-600 text-white px-3 py-1 rounded-l text-sm">Form</button>
+                            <button id="json-mode-btn" class="bg-gray-300 text-gray-700 px-3 py-1 rounded-r text-sm">JSON</button>
+                        </div>
+                        
+                        <div id="form-body" class="space-y-2">
+                            <!-- Form fields will be added here -->
+                        </div>
+                        
+                        <div id="json-body" class="hidden">
+                            <textarea id="json-body-input" class="w-full h-60 p-2 border border-gray-300 rounded font-mono text-sm"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button id="send-request-btn" class="bg-green-600 text-white px-4 py-2 rounded">Send Request</button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded shadow">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold">Response</h3>
+                        <div id="response-status" class="text-sm font-mono"></div>
+                    </div>
+                    
+                    <div class="response-container bg-gray-900 p-4 rounded">
+                        <pre id="response-body" class="text-green-400 font-mono text-sm"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API base URL - change this to match your Laravel API
+        const API_BASE_URL = 'http://localhost:8000/api';
+        
+        // State variables
+        let authToken = localStorage.getItem('api_token');
+        let authUser = JSON.parse(localStorage.getItem('auth_user') || 'null');
+        let currentEndpoint = null;
+        let bodyMode = 'form'; // 'form' or 'json'
+
+        // Endpoint definitions
+        const endpoints = [
+            {
+                group: 'Authentication',
+                items: [
+                    {
+                        name: 'Login',
+                        method: 'POST',
+                        path: '/login',
+                        description: 'Login with username and password to get an API token',
+                        params: [
+                            { name: 'nom', type: 'string', required: true, description: 'Username' },
+                            { name: 'password', type: 'string', required: true, description: 'Password' }
+                        ]
+                    },
+                    {
+                        name: 'Logout',
+                        method: 'POST',
+                        path: '/logout',
+                        description: 'Logout and invalidate current token',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Get Current User',
+                        method: 'GET',
+                        path: '/user',
+                        description: 'Get information about the currently authenticated user',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Check Permissions',
+                        method: 'POST',
+                        path: '/check-permissions',
+                        description: 'Check if current user has specific permissions',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'permissions', type: 'array', required: true, description: 'List of permission strings to check' }
+                        ]
+                    }
+                ]
+            },
+            {
+                group: 'Machines',
+                items: [
+                    {
+                        name: 'List Machines',
+                        method: 'GET',
+                        path: '/machines',
+                        description: 'Get all machines',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Create Machine',
+                        method: 'POST',
+                        path: '/machines',
+                        description: 'Create a new machine',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'id', type: 'integer', required: true, description: 'Machine ID' },
+                            { name: 'nom', type: 'string', required: true, description: 'Machine name' },
+                            { name: 'etat', type: 'string', required: true, description: 'Machine state' },
+                            { name: 'valeur', type: 'string', required: true, description: 'Machine value' },
+                            { name: 'dateProchaineMaint', type: 'date', required: false, description: 'Next maintenance date' }
+                        ]
+                    },
+                    {
+                        name: 'Get Machine',
+                        method: 'GET',
+                        path: '/machines/{id}',
+                        description: 'Get a specific machine by ID',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Machine ID' }
+                        ]
+                    },
+                    {
+                        name: 'Update Machine',
+                        method: 'PUT',
+                        path: '/machines/{id}',
+                        description: 'Update a specific machine',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Machine ID' }
+                        ],
+                        params: [
+                            { name: 'nom', type: 'string', required: true, description: 'Machine name' },
+                            { name: 'etat', type: 'string', required: true, description: 'Machine state' },
+                            { name: 'valeur', type: 'string', required: true, description: 'Machine value' },
+                            { name: 'dateProchaineMaint', type: 'date', required: false, description: 'Next maintenance date' }
+                        ]
+                    },
+                    {
+                        name: 'Delete Machine',
+                        method: 'DELETE',
+                        path: '/machines/{id}',
+                        description: 'Delete a specific machine',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Machine ID' }
+                        ]
+                    },
+                    {
+                        name: 'Machines Requiring Maintenance Soon',
+                        method: 'GET',
+                        path: '/machines/maintenance/soon',
+                        description: 'Get machines that require maintenance soon',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Update Machine Status',
+                        method: 'PUT',
+                        path: '/machines/{id}/update-status',
+                        description: 'Update the status of a machine after maintenance',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Machine ID' }
+                        ],
+                        params: [
+                            { name: 'etat', type: 'string', required: true, description: 'New machine state' },
+                            { name: 'dateProchaineMaint', type: 'date', required: true, description: 'Next maintenance date' }
+                        ]
+                    }
+                ]
+            },
+            {
+                group: 'Interventions',
+                items: [
+                    {
+                        name: 'List Interventions',
+                        method: 'GET',
+                        path: '/interventions',
+                        description: 'Get all interventions',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Create Intervention',
+                        method: 'POST',
+                        path: '/interventions',
+                        description: 'Create a new intervention',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'id', type: 'integer', required: true, description: 'Intervention ID' },
+                            { name: 'date', type: 'date', required: true, description: 'Intervention date' },
+                            { name: 'description', type: 'string', required: true, description: 'Description' },
+                            { name: 'typeOperation', type: 'string', required: true, description: 'Operation type' },
+                            { name: 'statut', type: 'string', required: true, description: 'Status' },
+                            { name: 'urgence', type: 'boolean', required: false, description: 'Is urgent?' },
+                            { name: 'machine_id', type: 'integer', required: true, description: 'Machine ID' },
+                            { name: 'utilisateurs', type: 'array', required: false, description: 'Users assigned to this intervention' }
+                        ]
+                    },
+                    {
+                        name: 'Get Intervention',
+                        method: 'GET',
+                        path: '/interventions/{id}',
+                        description: 'Get a specific intervention by ID',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Intervention ID' }
+                        ]
+                    },
+                    {
+                        name: 'Update Intervention',
+                        method: 'PUT',
+                        path: '/interventions/{id}',
+                        description: 'Update a specific intervention',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Intervention ID' }
+                        ],
+                        params: [
+                            { name: 'date', type: 'date', required: true, description: 'Intervention date' },
+                            { name: 'description', type: 'string', required: true, description: 'Description' },
+                            { name: 'typeOperation', type: 'string', required: true, description: 'Operation type' },
+                            { name: 'statut', type: 'string', required: true, description: 'Status' },
+                            { name: 'urgence', type: 'boolean', required: false, description: 'Is urgent?' },
+                            { name: 'machine_id', type: 'integer', required: true, description: 'Machine ID' },
+                            { name: 'utilisateurs', type: 'array', required: false, description: 'Users assigned to this intervention' }
+                        ]
+                    },
+                    {
+                        name: 'Delete Intervention',
+                        method: 'DELETE',
+                        path: '/interventions/{id}',
+                        description: 'Delete a specific intervention',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Intervention ID' }
+                        ]
+                    },
+                    {
+                        name: 'Urgent Interventions',
+                        method: 'GET',
+                        path: '/interventions/urgent',
+                        description: 'Get all urgent interventions',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Interventions by Status',
+                        method: 'GET',
+                        path: '/interventions/status/{status}',
+                        description: 'Get interventions with a specific status',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'status', type: 'string', required: true, description: 'Status to filter by' }
+                        ]
+                    },
+                    {
+                        name: 'Interventions by Machine',
+                        method: 'GET',
+                        path: '/interventions/machine/{machineId}',
+                        description: 'Get interventions for a specific machine',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'machineId', type: 'integer', required: true, description: 'Machine ID' }
+                        ]
+                    }
+                ]
+            },
+            {
+                group: 'Diagnostics',
+                items: [
+                    {
+                        name: 'List Diagnostics',
+                        method: 'GET',
+                        path: '/diagnostics',
+                        description: 'Get all diagnostics',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Create Diagnostic',
+                        method: 'POST',
+                        path: '/diagnostics',
+                        description: 'Create a new diagnostic',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'id', type: 'integer', required: true, description: 'Diagnostic ID' },
+                            { name: 'dateCreation', type: 'date', required: true, description: 'Creation date' },
+                            { name: 'intervention_id', type: 'integer', required: true, description: 'Intervention ID' },
+                            { name: 'travaux', type: 'array', required: false, description: 'Required work items' },
+                            { name: 'besoins', type: 'array', required: false, description: 'Required parts' },
+                            { name: 'charges', type: 'array', required: false, description: 'Realized charges' }
+                        ]
+                    },
+                    {
+                        name: 'Get Diagnostic by Intervention',
+                        method: 'GET',
+                        path: '/diagnostics/intervention/{interventionId}',
+                        description: 'Get diagnostic for a specific intervention',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'interventionId', type: 'integer', required: true, description: 'Intervention ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get Diagnostic',
+                        method: 'GET',
+                        path: '/diagnostics/{id}',
+                        description: 'Get a specific diagnostic by ID',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Diagnostic ID' }
+                        ]
+                    },
+                    {
+                        name: 'Update Diagnostic',
+                        method: 'PUT',
+                        path: '/diagnostics/{id}',
+                        description: 'Update a specific diagnostic',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Diagnostic ID' }
+                        ],
+                        params: [
+                            { name: 'dateCreation', type: 'date', required: true, description: 'Creation date' },
+                            { name: 'intervention_id', type: 'integer', required: true, description: 'Intervention ID' },
+                            { name: 'travaux', type: 'array', required: false, description: 'Required work items' },
+                            { name: 'besoins', type: 'array', required: false, description: 'Required parts' },
+                            { name: 'charges', type: 'array', required: false, description: 'Realized charges' }
+                        ]
+                    },
+                    {
+                        name: 'Delete Diagnostic',
+                        method: 'DELETE',
+                        path: '/diagnostics/{id}',
+                        description: 'Delete a specific diagnostic',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Diagnostic ID' }
+                        ]
+                    }
+                ]
+            },
+            {
+                group: 'Maintenance',
+                items: [
+                    {
+                        name: 'List Maintenances',
+                        method: 'GET',
+                        path: '/maintenances',
+                        description: 'Get all maintenances',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Create Maintenance',
+                        method: 'POST',
+                        path: '/maintenances',
+                        description: 'Create a new maintenance',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'intervention_id', type: 'integer', required: true, description: 'Intervention ID (Primary Key)' },
+                            { name: 'typeMaintenance', type: 'string', required: true, description: 'Maintenance type' },
+                            { name: 'duree', type: 'integer', required: true, description: 'Duration (in hours)' },
+                            { name: 'pieces', type: 'array', required: false, description: 'Parts used in maintenance' }
+                        ]
+                    },
+                    {
+                        name: 'Get Maintenance',
+                        method: 'GET',
+                        path: '/maintenances/{id}',
+                        description: 'Get a specific maintenance by ID',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Maintenance ID (Intervention ID)' }
+                        ]
+                    },
+                    {
+                        name: 'Update Maintenance',
+                        method: 'PUT',
+                        path: '/maintenances/{id}',
+                        description: 'Update a specific maintenance',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Maintenance ID (Intervention ID)' }
+                        ],
+                        params: [
+                            { name: 'typeMaintenance', type: 'string', required: true, description: 'Maintenance type' },
+                            { name: 'duree', type: 'integer', required: true, description: 'Duration (in hours)' },
+                            { name: 'pieces', type: 'array', required: false, description: 'Parts used in maintenance' }
+                        ]
+                    },
+                    {
+                        name: 'Delete Maintenance',
+                        method: 'DELETE',
+                        path: '/maintenances/{id}',
+                        description: 'Delete a specific maintenance',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Maintenance ID (Intervention ID)' }
+                        ]
+                    },
+                    {
+                        name: 'Complete Maintenance',
+                        method: 'PUT',
+                        path: '/maintenances/{id}/complete',
+                        description: 'Mark a maintenance as complete and update machine status',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Maintenance ID (Intervention ID)' }
+                        ],
+                        params: [
+                            { name: 'machine_etat', type: 'string', required: true, description: 'New machine state' },
+                            { name: 'machine_dateProchaineMaint', type: 'date', required: true, description: 'Next maintenance date' }
+                        ]
+                    },
+                    {
+                        name: 'Maintenance Statistics',
+                        method: 'GET',
+                        path: '/maintenances/statistics',
+                        description: 'Get maintenance statistics',
+                        requiresAuth: true
+                    }
+                ]
+            },
+            {
+                group: 'Renovations',
+                items: [
+                    {
+                        name: 'List Renovations',
+                        method: 'GET',
+                        path: '/renovations',
+                        description: 'Get all renovations',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Create Renovation',
+                        method: 'POST',
+                        path: '/renovations',
+                        description: 'Create a new renovation',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'intervention_id', type: 'integer', required: true, description: 'Intervention ID (Primary Key)' },
+                            { name: 'disponibilitePDR', type: 'boolean', required: true, description: 'Parts availability' },
+                            { name: 'objectif', type: 'string', required: true, description: 'Objective' },
+                            { name: 'cout', type: 'number', required: true, description: 'Cost' },
+                            { name: 'dureeEstimee', type: 'integer', required: true, description: 'Estimated duration (in hours)' }
+                        ]
+                    },
+                    {
+                        name: 'Get Renovation by Intervention',
+                        method: 'GET',
+                        path: '/renovations/intervention/{interventionId}',
+                        description: 'Get renovation for a specific intervention',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'interventionId', type: 'integer', required: true, description: 'Intervention ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get Renovation',
+                        method: 'GET',
+                        path: '/renovations/{id}',
+                        description: 'Get a specific renovation by ID',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Renovation ID (Intervention ID)' }
+                        ]
+                    },
+                    {
+                        name: 'Update Renovation',
+                        method: 'PUT',
+                        path: '/renovations/{id}',
+                        description: 'Update a specific renovation',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Renovation ID (Intervention ID)' }
+                        ],
+                        params: [
+                            { name: 'disponibilitePDR', type: 'boolean', required: true, description: 'Parts availability' },
+                            { name: 'objectif', type: 'string', required: true, description: 'Objective' },
+                            { name: 'cout', type: 'number', required: true, description: 'Cost' },
+                            { name: 'dureeEstimee', type: 'integer', required: true, description: 'Estimated duration (in hours)' }
+                        ]
+                    },
+                    {
+                        name: 'Delete Renovation',
+                        method: 'DELETE',
+                        path: '/renovations/{id}',
+                        description: 'Delete a specific renovation',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Renovation ID (Intervention ID)' }
+                        ]
+                    }
+                ]
+            },
+            {
+                group: 'Quality Control',
+                items: [
+                    {
+                        name: 'List Quality Controls',
+                        method: 'GET',
+                        path: '/controles',
+                        description: 'Get all quality controls',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Create Quality Control',
+                        method: 'POST',
+                        path: '/controles',
+                        description: 'Create a new quality control',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'id', type: 'integer', required: true, description: 'Quality Control ID' },
+                            { name: 'dateControle', type: 'date', required: true, description: 'Control date' },
+                            { name: 'resultatsEssais', type: 'string', required: false, description: 'Test results' },
+                            { name: 'analyseVibratoire', type: 'string', required: false, description: 'Vibratory analysis' },
+                            { name: 'intervention_id', type: 'integer', required: true, description: 'Intervention ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get Quality Control by Intervention',
+                        method: 'GET',
+                        path: '/controles/intervention/{interventionId}',
+                        description: 'Get quality control for a specific intervention',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'interventionId', type: 'integer', required: true, description: 'Intervention ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get Quality Control',
+                        method: 'GET',
+                        path: '/controles/{id}',
+                        description: 'Get a specific quality control by ID',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Quality Control ID' }
+                        ]
+                    },
+                    {
+                        name: 'Update Quality Control',
+                        method: 'PUT',
+                        path: '/controles/{id}',
+                        description: 'Update a specific quality control',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Quality Control ID' }
+                        ],
+                        params: [
+                            { name: 'dateControle', type: 'date', required: true, description: 'Control date' },
+                            { name: 'resultatsEssais', type: 'string', required: false, description: 'Test results' },
+                            { name: 'analyseVibratoire', type: 'string', required: false, description: 'Vibratory analysis' },
+                            { name: 'intervention_id', type: 'integer', required: true, description: 'Intervention ID' }
+                        ]
+                    },
+                    {
+                        name: 'Delete Quality Control',
+                        method: 'DELETE',
+                        path: '/controles/{id}',
+                        description: 'Delete a specific quality control',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Quality Control ID' }
+                        ]
+                    }
+                ]
+            },
+            {
+                group: 'Reports',
+                items: [
+                    {
+                        name: 'List Reports',
+                        method: 'GET',
+                        path: '/rapports',
+                        description: 'Get all reports',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Create Report',
+                        method: 'POST',
+                        path: '/rapports',
+                        description: 'Create a new report',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'id', type: 'integer', required: true, description: 'Report ID' },
+                            { name: 'dateCreation', type: 'date', required: true, description: 'Creation date' },
+                            { name: 'contenu', type: 'string', required: true, description: 'Content' },
+                            { name: 'validation', type: 'boolean', required: false, description: 'Validation status' },
+                            { name: 'renovation_id', type: 'integer', required: false, description: 'Renovation ID' },
+                            { name: 'maintenance_id', type: 'integer', required: false, description: 'Maintenance ID' },
+                            { name: 'prestataire_id', type: 'integer', required: false, description: 'Service Provider ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get Report',
+                        method: 'GET',
+                        path: '/rapports/{id}',
+                        description: 'Get a specific report by ID',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Report ID' }
+                        ]
+                    },
+                    {
+                        name: 'Update Report',
+                        method: 'PUT',
+                        path: '/rapports/{id}',
+                        description: 'Update a specific report',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Report ID' }
+                        ],
+                        params: [
+                            { name: 'dateCreation', type: 'date', required: true, description: 'Creation date' },
+                            { name: 'contenu', type: 'string', required: true, description: 'Content' },
+                            { name: 'validation', type: 'boolean', required: false, description: 'Validation status' },
+                            { name: 'prestataire_id', type: 'integer', required: false, description: 'Service Provider ID' }
+                        ]
+                    },
+                    {
+                        name: 'Delete Report',
+                        method: 'DELETE',
+                        path: '/rapports/{id}',
+                        description: 'Delete a specific report',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Report ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get Report by Renovation',
+                        method: 'GET',
+                        path: '/rapports/renovation/{renovationId}',
+                        description: 'Get report for a specific renovation',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'renovationId', type: 'integer', required: true, description: 'Renovation ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get Report by Maintenance',
+                        method: 'GET',
+                        path: '/rapports/maintenance/{maintenanceId}',
+                        description: 'Get report for a specific maintenance',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'maintenanceId', type: 'integer', required: true, description: 'Maintenance ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get Reports by Service Provider',
+                        method: 'GET',
+                        path: '/rapports/prestataire/{prestataireId}',
+                        description: 'Get reports for a specific service provider',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'prestataireId', type: 'integer', required: true, description: 'Service Provider ID' }
+                        ]
+                    },
+                    {
+                        name: 'Validate Report',
+                        method: 'PUT',
+                        path: '/rapports/{id}/validate',
+                        description: 'Validate a report',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Report ID' }
+                        ]
+                    }
+                ]
+            },
+            {
+                group: 'Planning',
+                items: [
+                    {
+                        name: 'List Plans',
+                        method: 'GET',
+                        path: '/planifications',
+                        description: 'Get all planning data',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Create Plan',
+                        method: 'POST',
+                        path: '/planifications',
+                        description: 'Create a new plan',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'id', type: 'integer', required: true, description: 'Plan ID' },
+                            { name: 'dateCreation', type: 'date', required: true, description: 'Creation date' },
+                            { name: 'capaciteExecution', type: 'integer', required: true, description: 'Execution capacity' },
+                            { name: 'urgencePrise', type: 'boolean', required: false, description: 'Urgency handled' },
+                            { name: 'disponibilitePDR', type: 'boolean', required: false, description: 'Parts availability' },
+                            { name: 'utilisateur_id', type: 'integer', required: true, description: 'User ID' },
+                            { name: 'interventions', type: 'array', required: false, description: 'Interventions included in this plan' }
+                        ]
+                    },
+                    {
+                        name: 'Get Plan',
+                        method: 'GET',
+                        path: '/planifications/{id}',
+                        description: 'Get a specific plan by ID',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Plan ID' }
+                        ]
+                    },
+                    {
+                        name: 'Update Plan',
+                        method: 'PUT',
+                        path: '/planifications/{id}',
+                        description: 'Update a specific plan',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Plan ID' }
+                        ],
+                        params: [
+                            { name: 'dateCreation', type: 'date', required: true, description: 'Creation date' },
+                            { name: 'capaciteExecution', type: 'integer', required: true, description: 'Execution capacity' },
+                            { name: 'urgencePrise', type: 'boolean', required: false, description: 'Urgency handled' },
+                            { name: 'disponibilitePDR', type: 'boolean', required: false, description: 'Parts availability' },
+                            { name: 'utilisateur_id', type: 'integer', required: true, description: 'User ID' },
+                            { name: 'interventions', type: 'array', required: false, description: 'Interventions included in this plan' }
+                        ]
+                    },
+                    {
+                        name: 'Delete Plan',
+                        method: 'DELETE',
+                        path: '/planifications/{id}',
+                        description: 'Delete a specific plan',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Plan ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get Plans by User',
+                        method: 'GET',
+                        path: '/planifications/user/{userId}',
+                        description: 'Get plans for a specific user',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'userId', type: 'integer', required: true, description: 'User ID' }
+                        ]
+                    }
+                ]
+            },
+            {
+                group: 'Users',
+                items: [
+                    {
+                        name: 'List Users',
+                        method: 'GET',
+                        path: '/utilisateurs',
+                        description: 'Get all users',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Create User',
+                        method: 'POST',
+                        path: '/utilisateurs',
+                        description: 'Create a new user',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'id', type: 'integer', required: true, description: 'User ID' },
+                            { name: 'nom', type: 'string', required: true, description: 'User name' },
+                            { name: 'section', type: 'string', required: true, description: 'Section name' },
+                            { name: 'credentials', type: 'string', required: true, description: 'Password (will be hashed)' },
+                            { name: 'section_id', type: 'integer', required: false, description: 'Section ID' },
+                            { name: 'roles', type: 'array', required: false, description: 'Roles assigned to this user' }
+                        ]
+                    },
+                    {
+                        name: 'Get User',
+                        method: 'GET',
+                        path: '/utilisateurs/{id}',
+                        description: 'Get a specific user by ID',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'User ID' }
+                        ]
+                    },
+                    {
+                        name: 'Update User',
+                        method: 'PUT',
+                        path: '/utilisateurs/{id}',
+                        description: 'Update a specific user',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'User ID' }
+                        ],
+                        params: [
+                            { name: 'nom', type: 'string', required: true, description: 'User name' },
+                            { name: 'section', type: 'string', required: true, description: 'Section name' },
+                            { name: 'credentials', type: 'string', required: false, description: 'Password (if changing)' },
+                            { name: 'section_id', type: 'integer', required: false, description: 'Section ID' },
+                            { name: 'roles', type: 'array', required: false, description: 'Roles assigned to this user' }
+                        ]
+                    },
+                    {
+                        name: 'Delete User',
+                        method: 'DELETE',
+                        path: '/utilisateurs/{id}',
+                        description: 'Delete a specific user',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'User ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get User Permissions',
+                        method: 'GET',
+                        path: '/utilisateurs/{id}/permissions',
+                        description: 'Get permissions for a specific user',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'User ID' }
+                        ]
+                    },
+                    {
+                        name: 'Assign Roles to User',
+                        method: 'POST',
+                        path: '/utilisateurs/{id}/roles',
+                        description: 'Assign roles to a user',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'User ID' }
+                        ],
+                        params: [
+                            { name: 'roles', type: 'array', required: true, description: 'Array of role IDs' }
+                        ]
+                    },
+                    {
+                        name: 'Get Users by Section',
+                        method: 'GET',
+                        path: '/utilisateurs/section/{sectionId}',
+                        description: 'Get users for a specific section',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'sectionId', type: 'integer', required: true, description: 'Section ID' }
+                        ]
+                    },
+                    {
+                        name: 'Create Admin User',
+                        method: 'POST',
+                        path: '/utilisateurs/create-admin',
+                        description: 'Create an admin user with all permissions',
+                        requiresAuth: true
+                    }
+                ]
+            },
+            {
+                group: 'Sections',
+                items: [
+                    {
+                        name: 'List Sections',
+                        method: 'GET',
+                        path: '/sections',
+                        description: 'Get all sections',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Create Section',
+                        method: 'POST',
+                        path: '/sections',
+                        description: 'Create a new section',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'id', type: 'integer', required: true, description: 'Section ID' },
+                            { name: 'nom', type: 'string', required: true, description: 'Section name' },
+                            { name: 'type', type: 'string', required: true, description: 'Section type' },
+                            { name: 'responsable_id', type: 'integer', required: false, description: 'Manager user ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get Section',
+                        method: 'GET',
+                        path: '/sections/{id}',
+                        description: 'Get a specific section by ID',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Section ID' }
+                        ]
+                    },
+                    {
+                        name: 'Update Section',
+                        method: 'PUT',
+                        path: '/sections/{id}',
+                        description: 'Update a specific section',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Section ID' }
+                        ],
+                        params: [
+                            { name: 'nom', type: 'string', required: true, description: 'Section name' },
+                            { name: 'type', type: 'string', required: true, description: 'Section type' },
+                            { name: 'responsable_id', type: 'integer', required: false, description: 'Manager user ID' }
+                        ]
+                    },
+                    {
+                        name: 'Delete Section',
+                        method: 'DELETE',
+                        path: '/sections/{id}',
+                        description: 'Delete a specific section',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Section ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get Sections by Manager',
+                        method: 'GET',
+                        path: '/sections/responsable/{responsableId}',
+                        description: 'Get sections managed by a specific user',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'responsableId', type: 'integer', required: true, description: 'Manager user ID' }
+                        ]
+                    }
+                ]
+            },
+            {
+                group: 'Roles & Permissions',
+                items: [
+                    {
+                        name: 'List Roles',
+                        method: 'GET',
+                        path: '/roles',
+                        description: 'Get all roles',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Create Role',
+                        method: 'POST',
+                        path: '/roles',
+                        description: 'Create a new role',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'id', type: 'integer', required: true, description: 'Role ID' },
+                            { name: 'nom', type: 'string', required: true, description: 'Role name' },
+                            { name: 'cout', type: 'number', required: true, description: 'Role cost' },
+                            { name: 'permissions', type: 'array', required: false, description: 'Permissions for this role' }
+                        ]
+                    },
+                    {
+                        name: 'Get Role',
+                        method: 'GET',
+                        path: '/roles/{id}',
+                        description: 'Get a specific role by ID',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Role ID' }
+                        ]
+                    },
+                    {
+                        name: 'Update Role',
+                        method: 'PUT',
+                        path: '/roles/{id}',
+                        description: 'Update a specific role',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Role ID' }
+                        ],
+                        params: [
+                            { name: 'nom', type: 'string', required: true, description: 'Role name' },
+                            { name: 'cout', type: 'number', required: true, description: 'Role cost' },
+                            { name: 'permissions', type: 'array', required: false, description: 'Permissions for this role' }
+                        ]
+                    },
+                    {
+                        name: 'Delete Role',
+                        method: 'DELETE',
+                        path: '/roles/{id}',
+                        description: 'Delete a specific role',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Role ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get Users with Role',
+                        method: 'GET',
+                        path: '/roles/{id}/users',
+                        description: 'Get users that have a specific role',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Role ID' }
+                        ]
+                    },
+                    {
+                        name: 'Assign Permissions to Role',
+                        method: 'POST',
+                        path: '/roles/{id}/permissions',
+                        description: 'Assign permissions to a role',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Role ID' }
+                        ],
+                        params: [
+                            { name: 'permissions', type: 'array', required: true, description: 'Array of permission IDs' }
+                        ]
+                    },
+                    {
+                        name: 'Create Admin Role',
+                        method: 'POST',
+                        path: '/roles/create-admin',
+                        description: 'Create an admin role with all permissions',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'List Permissions',
+                        method: 'GET',
+                        path: '/permissions',
+                        description: 'Get all permissions',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Create Permission',
+                        method: 'POST',
+                        path: '/permissions',
+                        description: 'Create a new permission',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'id', type: 'integer', required: true, description: 'Permission ID' },
+                            { name: 'module', type: 'string', required: true, description: 'Module name' },
+                            { name: 'action', type: 'string', required: true, description: 'Action name' },
+                            { name: 'description', type: 'string', required: false, description: 'Description' }
+                        ]
+                    },
+                    {
+                        name: 'Get Permission',
+                        method: 'GET',
+                        path: '/permissions/{id}',
+                        description: 'Get a specific permission by ID',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Permission ID' }
+                        ]
+                    },
+                    {
+                        name: 'Update Permission',
+                        method: 'PUT',
+                        path: '/permissions/{id}',
+                        description: 'Update a specific permission',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Permission ID' }
+                        ],
+                        params: [
+                            { name: 'module', type: 'string', required: true, description: 'Module name' },
+                            { name: 'action', type: 'string', required: true, description: 'Action name' },
+                            { name: 'description', type: 'string', required: false, description: 'Description' }
+                        ]
+                    },
+                    {
+                        name: 'Delete Permission',
+                        method: 'DELETE',
+                        path: '/permissions/{id}',
+                        description: 'Delete a specific permission',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Permission ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get Permissions by Module',
+                        method: 'GET',
+                        path: '/permissions/module/{module}',
+                        description: 'Get permissions for a specific module',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'module', type: 'string', required: true, description: 'Module name' }
+                        ]
+                    },
+                    {
+                        name: 'Get All Modules with Permissions',
+                        method: 'GET',
+                        path: '/permissions/modules',
+                        description: 'Get all modules with their permissions',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Generate CRUD Permissions',
+                        method: 'POST',
+                        path: '/permissions/generate-crud',
+                        description: 'Generate standard CRUD permissions for a module',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'module', type: 'string', required: true, description: 'Module name' }
+                        ]
+                    }
+                ]
+            },
+            {
+                group: 'External Service Providers',
+                items: [
+                    {
+                        name: 'List Service Providers',
+                        method: 'GET',
+                        path: '/prestataires',
+                        description: 'Get all service providers',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Create Service Provider',
+                        method: 'POST',
+                        path: '/prestataires',
+                        description: 'Create a new service provider',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'id', type: 'integer', required: true, description: 'Service Provider ID' },
+                            { name: 'nom', type: 'string', required: true, description: 'Provider name' },
+                            { name: 'contrat', type: 'string', required: false, description: 'Contract details' },
+                            { name: 'rapportOperation', type: 'string', required: false, description: 'Operation report' },
+                            { name: 'utilisateurs', type: 'array', required: false, description: 'Users associated with this provider' }
+                        ]
+                    },
+                    {
+                        name: 'Get Service Provider',
+                        method: 'GET',
+                        path: '/prestataires/{id}',
+                        description: 'Get a specific service provider by ID',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Service Provider ID' }
+                        ]
+                    },
+                    {
+                        name: 'Update Service Provider',
+                        method: 'PUT',
+                        path: '/prestataires/{id}',
+                        description: 'Update a specific service provider',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Service Provider ID' }
+                        ],
+                        params: [
+                            { name: 'nom', type: 'string', required: true, description: 'Provider name' },
+                            { name: 'contrat', type: 'string', required: false, description: 'Contract details' },
+                            { name: 'rapportOperation', type: 'string', required: false, description: 'Operation report' },
+                            { name: 'utilisateurs', type: 'array', required: false, description: 'Users associated with this provider' }
+                        ]
+                    },
+                    {
+                        name: 'Delete Service Provider',
+                        method: 'DELETE',
+                        path: '/prestataires/{id}',
+                        description: 'Delete a specific service provider',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Service Provider ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get Reports by Service Provider',
+                        method: 'GET',
+                        path: '/prestataires/{id}/rapports',
+                        description: 'Get reports for a specific service provider',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Service Provider ID' }
+                        ]
+                    },
+                    {
+                        name: 'Assign Users to Service Provider',
+                        method: 'POST',
+                        path: '/prestataires/{id}/users',
+                        description: 'Assign users to a service provider',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Service Provider ID' }
+                        ],
+                        params: [
+                            { name: 'utilisateurs', type: 'array', required: true, description: 'Array of user IDs' }
+                        ]
+                    }
+                ]
+            },
+            {
+                group: 'Administrative Management',
+                items: [
+                    {
+                        name: 'List Administrative Management',
+                        method: 'GET',
+                        path: '/gestions',
+                        description: 'Get all administrative management entries',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Create Administrative Management',
+                        method: 'POST',
+                        path: '/gestions',
+                        description: 'Create a new administrative management entry',
+                        requiresAuth: true,
+                        params: [
+                            { name: 'id', type: 'integer', required: true, description: 'Administrative Management ID' },
+                            { name: 'commandeAchat', type: 'string', required: false, description: 'Purchase order' },
+                            { name: 'facturation', type: 'string', required: false, description: 'Billing details' },
+                            { name: 'validation', type: 'boolean', required: false, description: 'Validation status' },
+                            { name: 'rapport_id', type: 'integer', required: true, description: 'Report ID' },
+                            { name: 'utilisateurs', type: 'array', required: false, description: 'Users associated with this management' }
+                        ]
+                    },
+                    {
+                        name: 'Get Administrative Management',
+                        method: 'GET',
+                        path: '/gestions/{id}',
+                        description: 'Get a specific administrative management entry by ID',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Administrative Management ID' }
+                        ]
+                    },
+                    {
+                        name: 'Update Administrative Management',
+                        method: 'PUT',
+                        path: '/gestions/{id}',
+                        description: 'Update a specific administrative management entry',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Administrative Management ID' }
+                        ],
+                        params: [
+                            { name: 'commandeAchat', type: 'string', required: false, description: 'Purchase order' },
+                            { name: 'facturation', type: 'string', required: false, description: 'Billing details' },
+                            { name: 'validation', type: 'boolean', required: false, description: 'Validation status' },
+                            { name: 'utilisateurs', type: 'array', required: false, description: 'Users associated with this management' }
+                        ]
+                    },
+                    {
+                        name: 'Delete Administrative Management',
+                        method: 'DELETE',
+                        path: '/gestions/{id}',
+                        description: 'Delete a specific administrative management entry',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Administrative Management ID' }
+                        ]
+                    },
+                    {
+                        name: 'Get Administrative Management by Report',
+                        method: 'GET',
+                        path: '/gestions/rapport/{rapportId}',
+                        description: 'Get administrative management for a specific report',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'rapportId', type: 'integer', required: true, description: 'Report ID' }
+                        ]
+                    },
+                    {
+                        name: 'Assign Users to Administrative Management',
+                        method: 'POST',
+                        path: '/gestions/{id}/users',
+                        description: 'Assign users to an administrative management entry',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Administrative Management ID' }
+                        ],
+                        params: [
+                            { name: 'utilisateurs', type: 'array', required: true, description: 'Array of user IDs' }
+                        ]
+                    },
+                    {
+                        name: 'Validate Administrative Management',
+                        method: 'PUT',
+                        path: '/gestions/{id}/validate',
+                        description: 'Validate an administrative management entry',
+                        requiresAuth: true,
+                        urlParams: [
+                            { name: 'id', type: 'integer', required: true, description: 'Administrative Management ID' }
+                        ]
+                    }
+                ]
+            },
+            {
+                group: 'Dashboard',
+                items: [
+                    {
+                        name: 'Dashboard Statistics',
+                        method: 'GET',
+                        path: '/dashboard/statistics',
+                        description: 'Get system-wide statistics for dashboard',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Urgent Interventions',
+                        method: 'GET',
+                        path: '/dashboard/urgent-interventions',
+                        description: 'Get urgent interventions for dashboard',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Upcoming Maintenance',
+                        method: 'GET',
+                        path: '/dashboard/upcoming-maintenance',
+                        description: 'Get upcoming maintenance for dashboard',
+                        requiresAuth: true
+                    },
+                    {
+                        name: 'Recent Activities',
+                        method: 'GET',
+                        path: '/dashboard/recent-activities',
+                        description: 'Get recent activities for dashboard',
+                        requiresAuth: true
+                    }
+                ]
+            }
+        ];
+
+        // Utility functions
+        function updateAuthStatus() {
+            const authStatusEl = document.getElementById('auth-status');
+            const logoutBtn = document.getElementById('logout-btn');
+            const loginPanel = document.getElementById('login-panel');
+            
+            if (authToken && authUser) {
+                authStatusEl.textContent = `Logged in as: ${authUser.nom}`;
+                authStatusEl.className = 'text-green-600';
+                logoutBtn.classList.remove('hidden');
+                loginPanel.classList.add('hidden');
+            } else {
+                authStatusEl.textContent = 'Not logged in';
+                authStatusEl.className = 'text-red-600';
+                logoutBtn.classList.add('hidden');
+                loginPanel.classList.remove('hidden');
+            }
+        }
+
+        function populateEndpoints() {
+            const container = document.getElementById('endpoints-container');
+            container.innerHTML = '';
+            
+            endpoints.forEach((group, groupIndex) => {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'endpoint-group mb-2';
+                
+                const groupHeader = document.createElement('div');
+                groupHeader.className = 'group-header p-2 bg-gray-100 rounded flex justify-between items-center';
+                groupHeader.innerHTML = `
+                    <span>${group.group} (${group.items.length})</span>
+                    <i class="fas fa-chevron-down text-gray-500"></i>
+                `;
+                
+                const endpointList = document.createElement('div');
+                endpointList.className = 'endpoint-list mt-1';
+                
+                group.items.forEach((endpoint, endpointIndex) => {
+                    const endpointItem = document.createElement('div');
+                    endpointItem.className = 'endpoint-item p-2 hover:bg-blue-50 text-sm cursor-pointer flex items-center';
+                    endpointItem.dataset.groupIndex = groupIndex;
+                    endpointItem.dataset.endpointIndex = endpointIndex;
+                    
+                    // Method badge
+                    let methodColor = 'bg-blue-500'; // GET
+                    if (endpoint.method === 'POST') methodColor = 'bg-green-500';
+                    if (endpoint.method === 'PUT' || endpoint.method === 'PATCH') methodColor = 'bg-yellow-500';
+                    if (endpoint.method === 'DELETE') methodColor = 'bg-red-500';
+                    
+                    endpointItem.innerHTML = `
+                        <span class="${methodColor} text-white text-xs p-1 rounded mr-2 w-14 text-center">${endpoint.method}</span>
+                        <span class="flex-1">${endpoint.name}</span>
+                    `;
+                    
+                    endpointItem.addEventListener('click', () => {
+                        const endpoints = document.querySelectorAll('.endpoint-item');
+                        endpoints.forEach(ep => ep.classList.remove('active-endpoint'));
+                        endpointItem.classList.add('active-endpoint');
+                        showEndpointDetails(groupIndex, endpointIndex);
+                    });
+                    
+                    endpointList.appendChild(endpointItem);
+                });
+                
+                groupHeader.addEventListener('click', () => {
+                    endpointList.classList.toggle('hidden');
+                    const icon = groupHeader.querySelector('i');
+                    icon.classList.toggle('fa-chevron-down');
+                    icon.classList.toggle('fa-chevron-up');
+                });
+                
+                groupDiv.appendChild(groupHeader);
+                groupDiv.appendChild(endpointList);
+                container.appendChild(groupDiv);
+            });
+        }
+
+        function showEndpointDetails(groupIndex, endpointIndex) {
+            const endpoint = endpoints[groupIndex].items[endpointIndex];
+            currentEndpoint = endpoint;
+            
+            // Show the endpoint details
+            document.getElementById('endpoint-details').classList.remove('hidden');
+            document.getElementById('endpoint-title').textContent = endpoint.name;
+            document.getElementById('endpoint-method').textContent = endpoint.method;
+            document.getElementById('endpoint-description').textContent = endpoint.description;
+            document.getElementById('endpoint-url').textContent = API_BASE_URL + endpoint.path;
+            
+            // Clear previous response
+            document.getElementById('response-status').textContent = '';
+            document.getElementById('response-body').textContent = '';
+            
+            // Handle URL parameters container
+            const urlParamsContainer = document.getElementById('url-params-container');
+            const urlParamsEl = document.getElementById('url-params');
+            urlParamsEl.innerHTML = '';
+            
+            if (endpoint.urlParams && endpoint.urlParams.length > 0) {
+                endpoint.urlParams.forEach(param => {
+                    const paramDiv = document.createElement('div');
+                    paramDiv.className = 'param-item';
+                    paramDiv.innerHTML = `
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            ${param.name} 
+                            ${param.required ? '<span class="text-red-500">*</span>' : ''}
+                            <span class="text-xs text-gray-500">(${param.type})</span>
+                        </label>
+                        <input type="text" id="url-param-${param.name}" 
+                            class="w-full p-2 border border-gray-300 rounded" 
+                            placeholder="${param.description || ''}">
+                    `;
+                    urlParamsEl.appendChild(paramDiv);
+                });
+                urlParamsContainer.classList.remove('hidden');
+            } else {
+                urlParamsContainer.classList.add('hidden');
+            }
+            
+            // Handle request body container
+            const requestBodyContainer = document.getElementById('request-body-container');
+            const formBodyEl = document.getElementById('form-body');
+            formBodyEl.innerHTML = '';
+            
+            // For GET and DELETE methods, typically no request body is needed
+            if (endpoint.method === 'GET' || endpoint.method === 'DELETE') {
+                requestBodyContainer.classList.add('hidden');
+            } else {
+                if (endpoint.params && endpoint.params.length > 0) {
+                    endpoint.params.forEach(param => {
+                        const paramDiv = document.createElement('div');
+                        paramDiv.className = 'param-item';
+                        
+                        let inputHTML = '';
+                        
+                        if (param.type === 'boolean') {
+                            inputHTML = `
+                                <select id="form-param-${param.name}" class="w-full p-2 border border-gray-300 rounded">
+                                    <option value="">-- Select --</option>
+                                    <option value="true">True</option>
+                                    <option value="false">False</option>
+                                </select>
+                            `;
+                        } else if (param.type === 'array') {
+                            inputHTML = `
+                                <textarea id="form-param-${param.name}" 
+                                    class="w-full p-2 border border-gray-300 rounded" 
+                                    placeholder="Enter values separated by commas"></textarea>
+                                <div class="text-xs text-gray-500 mt-1">For arrays, enter values separated by commas</div>
+                            `;
+                        } else {
+                            inputHTML = `
+                                <input type="${param.type === 'date' ? 'date' : 'text'}" 
+                                    id="form-param-${param.name}" 
+                                    class="w-full p-2 border border-gray-300 rounded" 
+                                    placeholder="${param.description || ''}">
+                            `;
+                        }
+                        
+                        paramDiv.innerHTML = `
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                ${param.name} 
+                                ${param.required ? '<span class="text-red-500">*</span>' : ''}
+                                <span class="text-xs text-gray-500">(${param.type})</span>
+                            </label>
+                            ${inputHTML}
+                        `;
+                        
+                        formBodyEl.appendChild(paramDiv);
+                    });
+                    requestBodyContainer.classList.remove('hidden');
+                    
+                    // Prepare JSON version of the form
+                    updateJsonFromForm();
+                } else {
+                    requestBodyContainer.classList.add('hidden');
+                }
+            }
+        }
+
+        function updateJsonFromForm() {
+            if (!currentEndpoint || !currentEndpoint.params) return;
+            
+            const jsonObj = {};
+            
+            currentEndpoint.params.forEach(param => {
+                const formEl = document.getElementById(`form-param-${param.name}`);
+                if (formEl && formEl.value) {
+                    if (param.type === 'array') {
+                        jsonObj[param.name] = formEl.value.split(',').map(item => item.trim());
+                    } else if (param.type === 'integer') {
+                        jsonObj[param.name] = parseInt(formEl.value);
+                    } else if (param.type === 'number') {
+                        jsonObj[param.name] = parseFloat(formEl.value);
+                    } else if (param.type === 'boolean') {
+                        jsonObj[param.name] = formEl.value === 'true';
+                    } else {
+                        jsonObj[param.name] = formEl.value;
+                    }
+                }
+            });
+            
+            document.getElementById('json-body-input').value = JSON.stringify(jsonObj, null, 2);
+        }
+
+        function sendRequest() {
+            if (!currentEndpoint) return;
+            
+            // Prepare URL
+            let url = API_BASE_URL + currentEndpoint.path;
+            
+            // Replace URL parameters if any
+            if (currentEndpoint.urlParams && currentEndpoint.urlParams.length > 0) {
+                currentEndpoint.urlParams.forEach(param => {
+                    const value = document.getElementById(`url-param-${param.name}`).value;
+                    if (param.required && !value) {
+                        alert(`URL parameter "${param.name}" is required.`);
+                        return;
+                    }
+                    url = url.replace(`{${param.name}}`, value);
+                });
+            }
+            
+            // Prepare request options
+            const options = {
+                method: currentEndpoint.method,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
+            
+            // Add authorization header if required
+            if (currentEndpoint.requiresAuth && authToken) {
+                options.headers['Authorization'] = `Bearer ${authToken}`;
+            } else if (currentEndpoint.requiresAuth && !authToken) {
+                alert('This endpoint requires authentication. Please login first.');
+                return;
+            }
+            
+            // Add request body if needed
+            if (currentEndpoint.method !== 'GET' && currentEndpoint.method !== 'DELETE') {
+                if (bodyMode === 'json') {
+                    try {
+                        options.body = document.getElementById('json-body-input').value;
+                    } catch (e) {
+                        alert('Invalid JSON: ' + e.message);
+                        return;
+                    }
+                } else {
+                    // Form mode - build JSON from form values
+                    const formData = {};
+                    
+                    if (currentEndpoint.params && currentEndpoint.params.length > 0) {
+                        currentEndpoint.params.forEach(param => {
+                            const formEl = document.getElementById(`form-param-${param.name}`);
+                            if (formEl) {
+                                const value = formEl.value;
+                                
+                                if (param.required && !value) {
+                                    alert(`Parameter "${param.name}" is required.`);
+                                    return;
+                                }
+                                
+                                if (value) {
+                                    if (param.type === 'array') {
+                                        formData[param.name] = value.split(',').map(item => item.trim());
+                                    } else if (param.type === 'integer') {
+                                        formData[param.name] = parseInt(value);
+                                    } else if (param.type === 'number') {
+                                        formData[param.name] = parseFloat(value);
+                                    } else if (param.type === 'boolean') {
+                                        formData[param.name] = value === 'true';
+                                    } else {
+                                        formData[param.name] = value;
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    
+                    options.body = JSON.stringify(formData);
+                }
+            }
+            
+            // Send the request
+            fetch(url, options)
+                .then(response => {
+                    // Set the response status
+                    const statusEl = document.getElementById('response-status');
+                    statusEl.textContent = `${response.status} ${response.statusText}`;
+                    
+                    if (response.ok) {
+                        statusEl.className = 'text-sm font-mono bg-green-100 text-green-800 p-1 rounded';
+                    } else {
+                        statusEl.className = 'text-sm font-mono bg-red-100 text-red-800 p-1 rounded';
+                    }
+                    
+                    return response.json();
+                })
+                .then(data => {
+                    // Handle login response specifically
+                    if (currentEndpoint.path === '/login' && data.token) {
+                        authToken = data.token;
+                        authUser = data.user;
+                        localStorage.setItem('api_token', authToken);
+                        localStorage.setItem('auth_user', JSON.stringify(authUser));
+                        updateAuthStatus();
+                    }
+                    
+                    // Handle logout response
+                    if (currentEndpoint.path === '/logout') {
+                        authToken = null;
+                        authUser = null;
+                        localStorage.removeItem('api_token');
+                        localStorage.removeItem('auth_user');
+                        updateAuthStatus();
+                    }
+                    
+                    // Display the response
+                    document.getElementById('response-body').textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('response-status').textContent = 'Error';
+                    document.getElementById('response-status').className = 'text-sm font-mono bg-red-100 text-red-800 p-1 rounded';
+                    document.getElementById('response-body').textContent = error.toString();
+                });
+        }
+
+        // Event listeners
+        document.getElementById('login-btn').addEventListener('click', function() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            
+            fetch(`${API_BASE_URL}/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    nom: username,
+                    password: password
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.token) {
+                    authToken = data.token;
+                    authUser = data.user;
+                    localStorage.setItem('api_token', authToken);
+                    localStorage.setItem('auth_user', JSON.stringify(authUser));
+                    updateAuthStatus();
+                    alert('Login successful!');
+                } else {
+                    alert('Login failed: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Login failed: ' + error.toString());
+            });
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', function() {
+            fetch(`${API_BASE_URL}/logout`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                authToken = null;
+                authUser = null;
+                localStorage.removeItem('api_token');
+                localStorage.removeItem('auth_user');
+                updateAuthStatus();
+                alert('Logout successful!');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Logout failed: ' + error.toString());
+            });
+        });
+
+        document.getElementById('form-mode-btn').addEventListener('click', function() {
+            bodyMode = 'form';
+            document.getElementById('form-mode-btn').className = 'bg-blue-600 text-white px-3 py-1 rounded-l text-sm';
+            document.getElementById('json-mode-btn').className = 'bg-gray-300 text-gray-700 px-3 py-1 rounded-r text-sm';
+            document.getElementById('form-body').classList.remove('hidden');
+            document.getElementById('json-body').classList.add('hidden');
+        });
+
+        document.getElementById('json-mode-btn').addEventListener('click', function() {
+            bodyMode = 'json';
+            document.getElementById('form-mode-btn').className = 'bg-gray-300 text-gray-700 px-3 py-1 rounded-l text-sm';
+            document.getElementById('json-mode-btn').className = 'bg-blue-600 text-white px-3 py-1 rounded-r text-sm';
+            document.getElementById('form-body').classList.add('hidden');
+            document.getElementById('json-body').classList.remove('hidden');
+            
+            // Update JSON from form values
+            updateJsonFromForm();
+        });
+
+        document.getElementById('send-request-btn').addEventListener('click', sendRequest);
+
+        document.getElementById('endpoint-search').addEventListener('input', function() {
+            const searchText = this.value.toLowerCase();
+            
+            // First expand all groups for easier searching
+            const groupHeaders = document.querySelectorAll('.group-header');
+            const endpointLists = document.querySelectorAll('.endpoint-list');
+            
+            groupHeaders.forEach((header, index) => {
+                const icon = header.querySelector('i');
+                
+                if (searchText) {
+                    // Expand all when searching
+                    endpointLists[index].classList.remove('hidden');
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                }
+            });
+            
+            // Then filter the endpoints
+            const endpointItems = document.querySelectorAll('.endpoint-item');
+            let matchCount = 0;
+            
+            endpointItems.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                
+                if (searchText === '' || text.includes(searchText)) {
+                    item.style.display = '';
+                    matchCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            // Update group counts or hide empty groups
+            const endpointGroups = document.querySelectorAll('.endpoint-group');
+            
+            endpointGroups.forEach(group => {
+                const visibleItems = group.querySelectorAll('.endpoint-item[style=""]').length;
+                
+                // Update count in header
+                const groupHeader = group.querySelector('.group-header span');
+                const groupName = groupHeader.textContent.split(' (')[0];
+                
+                if (visibleItems > 0) {
+                    groupHeader.textContent = `${groupName} (${visibleItems})`;
+                    group.style.display = '';
+                } else {
+                    group.style.display = 'none';
+                }
+            });
+        });
+
+        // Initialize
+        updateAuthStatus();
+        populateEndpoints();
+    </script>
+</body>
+</html>
